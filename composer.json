@@ -1,5 +1,5 @@
 {
-    "name": "EsParser",
+    "name": "qieangel2013/EsParser",
     "description": "es php library",
     "type": "library",
     "keywords": ["sql","elasticsearch","restful"],
