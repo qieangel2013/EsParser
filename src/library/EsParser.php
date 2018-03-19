@@ -17,9 +17,10 @@ class EsParser {
     public $url;
     private $top_hits=0;
     private $top_hits_size=1;
-    private $table;
     private $agg;
     private $sort;
+    private $index_es='';
+    private $type_es='';
     private $count_tmp=0;
     private $tmp_str='';
     private $fistgroup='';
@@ -33,8 +34,19 @@ class EsParser {
      * @param String  $sql           The SQL statement.
      * @param boolean $calcPositions True, if the output should contain [position], false otherwise.
      */
-    public function __construct($sql = false,$calcPositions = false,$url='http://127.0.0.1:9200') {
-        $this->url=$url;
+    public function __construct($sql = false,$calcPositions = false,$es_config=array()) {
+        if(empty($es_config)){
+            $config_err=array(
+                'fail' =>1,
+                'message'=>'es的配置为空!'
+                 );
+            $this->result=json_encode($config_err,true);
+            return $this->result;
+        }else{
+            $this->index_es=$es_config['index'];
+            $this->type_es=$es_config['type'];
+            $this->url=$es_config['url'];
+        }
         if ($sql) {
             $this->parse($sql, $calcPositions);
         }
@@ -72,21 +84,35 @@ class EsParser {
     }
 
     private function EsBuilder(){
+        //select
         if(isset($this->parsed['SELECT']) && !empty($this->parsed['SELECT'])){
             $this->select($this->parsed['SELECT']);
         }
+        //table
         if(isset($this->parsed['FROM']) && !empty($this->parsed['FROM'])){
             $this->table($this->parsed['FROM']);
+        }
+        //update
+        if(isset($this->parsed['UPDATE']) && !empty($this->parsed['UPDATE'])){
+            $this->update($this->parsed['UPDATE']);
+        }
+        //set
+        if(isset($this->parsed['SET']) && !empty($this->parsed['SET'])){
+            $this->updateset($this->parsed['SET']);
+        }
+        //delete
+        if(isset($this->parsed['DELETE']) && !empty($this->parsed['DELETE'])){
+            $this->delete($this->parsed['DELETE']);
         }
         //limit
         if(isset($this->parsed['LIMIT']) && !empty($this->parsed['LIMIT'])){
             $this->limit($this->parsed['LIMIT']);
             if(isset($this->parsed['GROUP']) && !empty($this->parsed['GROUP'])){
-            	$this->Builderarr['size']=0;
+                $this->Builderarr['size']=0;
             }else{
-            	$this->Builderarr['from']=$this->limit['from'] * $this->limit['size'];
-            	$this->Builderarr['size']=$this->limit['size'];
-        	}
+                $this->Builderarr['from']=$this->limit['from'] * $this->limit['size'];
+                $this->Builderarr['size']=$this->limit['size'];
+            }
         }
         //where
         if(isset($this->parsed['WHERE']) && !empty($this->parsed['WHERE'])){
@@ -111,63 +137,92 @@ class EsParser {
     }
 
     public function explain(){
-    	$this->explain=json_encode($this->Builderarr,true);
-    	return $this->explain;
+        $this->explain=json_encode($this->Builderarr,true);
+        return $this->explain;
     }
 
 
     private function table($arr){
-    	foreach ($arr as $v) {
-    		if($v['table']){
-    			$this->table=$v['table'];
-    			$this->url .="/".$v['table']."/".$v['table']."/_search?pretty";
-    		}
-    	}
+        if(isset($this->parsed['DELETE']) && !empty($this->parsed['DELETE'])){
+            foreach ($arr as $v) {
+                if($v['table']){
+                    $this->url .="/".$this->index_es."/".$this->type_es."/_delete_by_query?pretty";
+                }
+            }
+        }else{
+            foreach ($arr as $v) {
+                if($v['table']){
+                    $this->url .="/".$this->index_es."/".$this->type_es."/_search?pretty";
+                }
+            }
+        }
+        
+    }
+
+    private function update($arr){
+        foreach ($arr as $v) {
+            if($v['table']){
+                $this->table=$v['table'];
+                $this->url .="/".$this->index_es."/".$this->type_es."/";
+            }
+        }
+    }
+
+    private function delete($arr){
     }
 
     private function PostEs($postdata,$json=false,$token=false){
-    	$url=$this->url;
-    	$datastring = json_encode($postdata,true);
-	    $ch = curl_init($url);
-	    curl_setopt($ch, CURLOPT_URL, $url) ;
-	    curl_setopt($ch, CURLOPT_POST, 1) ;
-	    curl_setopt($ch, CURLOPT_HEADER, 0);
-	    curl_setopt($ch, CURLINFO_HEADER_OUT, true);
-	    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-	    curl_setopt($ch, CURLOPT_TIMEOUT, 60);   //只需要设置一个秒的数量就可以
-	    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-	    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-	    curl_setopt($ch, CURLOPT_SSLVERSION, 3);
-	    curl_setopt($ch, CURLOPT_POSTFIELDS, $datastring);
-	    if ($json) {
-	          curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-	                'Content-Type: application/json; charset=utf-8',
-	                'Content-Length: ' . strlen($datastring))
-	            );
-	    }
-	    if ($token) {
-	            curl_setopt( $ch, CURLOPT_HTTPHEADER, array(
-	                    'Content-Type: application/json; charset=utf-8',
-	                    'Content-Length: ' . strlen($datastring),
-	                    'Authorization:'.$token
-	                )
-	            );
-	    }
-	    $output=curl_exec($ch);
-	    if($output === false)  //超时处理
-	        { 
-	            if(curl_errno($ch) == CURLE_OPERATION_TIMEDOUT)  
-	            {  
-	             file_put_contents("getEsData.txt", "时间：".date('Ymd-H:i:s',time())."\r\n错误内容为：curl通过post方式请求{$this->url}的连接超时\r\n");
-	            }  
-	    }
-	    curl_close($ch);
-	    $output=json_decode($output,true);
-	    if (empty($output)) {
+        $url=$this->url;
+        $datastring = json_encode($postdata,true);
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_URL, $url) ;
+        curl_setopt($ch, CURLOPT_POST, 1) ;
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLINFO_HEADER_OUT, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);   //只需要设置一个秒的数量就可以
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSLVERSION, 3);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $datastring);
+        if ($json) {
+              curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                    'Content-Type: application/json; charset=utf-8',
+                    'Content-Length: ' . strlen($datastring))
+                );
+        }
+        if ($token) {
+                curl_setopt( $ch, CURLOPT_HTTPHEADER, array(
+                        'Content-Type: application/json; charset=utf-8',
+                        'Content-Length: ' . strlen($datastring),
+                        'Authorization:'.$token
+                    )
+                );
+        }
+        $output=curl_exec($ch);
+        if($output === false)  //超时处理
+            { 
+                if(curl_errno($ch) == CURLE_OPERATION_TIMEDOUT)  
+                {  
+                 file_put_contents("getEsData.txt", "时间：".date('Ymd-H:i:s',time())."\r\n错误内容为：curl通过post方式请求{$this->url}的连接超时\r\n");
+                }  
+        }
+        curl_close($ch);
+        $output=json_decode($output,true);
+        if (empty($output)) {
               $this->result=json_encode(array(),true);
-	    }
+        }
         if(isset($output['error'])){
             $this->result=json_encode($output,true);
+        }else if(isset($this->parsed['UPDATE']) && !empty($this->parsed['UPDATE'])){
+            $update_arr=$output['_shards'];
+            unset($update_arr['total']);
+            $this->result=json_encode($update_arr,true);
+        }else if(isset($this->parsed['DELETE']) && !empty($this->parsed['DELETE'])){
+            $delete_arr['total']=$output['total'];
+            $delete_arr['deleted']=$output['deleted'];
+            $delete_arr['successfull']=$output['deleted'];
+            $this->result=json_encode($delete_arr,true);
         }else{
             $total_str=$output['hits']['total'];
             if(isset($this->parsed['GROUP']) && !empty($this->parsed['GROUP'])){
@@ -183,57 +238,61 @@ class EsParser {
             $this->result=json_encode($outputs,true);
         }
         return $this->result;
-	    
+        
     }
 
     private function where($arr){
-    	for($i=0;$i<count($arr);$i++){
-    		if(!is_numeric($arr[$i]['base_expr'])){
-    			$lowerstr = strtolower($arr[$i]['base_expr']);
-    		}else{
-    			$lowerstr = $arr[$i]['base_expr'];
-    		}
-    		switch ($lowerstr) {
-    			case '=':
-    				if(strrpos($arr[$i-1]['base_expr'],".")){
-    					$term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
-    					$termk=$term_tmp_arr[1];
-    				}else{
-    					$termk=$arr[$i-1]['base_expr'];
-    				}
-    				if(!is_numeric($arr[$i+1]['base_expr'])){
-    					$term['term'][$termk.'.keyword']=$arr[$i+1]['base_expr'];
-    					$this->Builderarr['query']['bool']['must'][0]['bool']['must'][]=$term;
-    				}else{
-    					$term['term'][$termk]=$arr[$i+1]['base_expr'];
-    					$this->Builderarr['query']['bool']['must'][0]['bool']['must'][]=$term;
-    				}
-    				unset($term['term']);
-    				break;
-    			case 'in':
-    				if(strrpos($arr[$i-1]['base_expr'],".")){
-    					$term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
-    					$termk=$term_tmp_arr[1];
-    				}else{
-    					$termk=$arr[$i-1]['base_expr'];
-    				}
-    				if(isset($arr[$i+1]['sub_tree']) && !empty($arr[$i+1]['sub_tree'])){
-    					foreach ($arr[$i+1]['sub_tree'] as &$vv) {
-    						if(!is_numeric($vv['base_expr'])){
-    							$termk .='.keyword';
-    						}
-    						$this->Builderarr['query']['bool']['filter']['terms'][$termk][]=$vv['base_expr'];
-    					}
-    				}
-    				unset($termk);
-    				break;
-    			case '>':
-    				if(strrpos($arr[$i-1]['base_expr'],".")){
-    					$term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
-    					$termk=$term_tmp_arr[1];
-    				}else{
-    					$termk=$arr[$i-1]['base_expr'];
-    				}
+        for($i=0;$i<count($arr);$i++){
+            if(!is_numeric($arr[$i]['base_expr'])){
+                $lowerstr = strtolower($arr[$i]['base_expr']);
+            }else{
+                $lowerstr = $arr[$i]['base_expr'];
+            }
+            switch ($lowerstr) {
+                case '=':
+                    if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        $termk=$term_tmp_arr[1];
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                    if(isset($this->parsed['UPDATE']) && !empty($this->parsed['UPDATE'])){
+                        $this->url .=$arr[$i+1]['base_expr'] ."/_update?pretty";
+                    }else{
+                        if(!is_numeric($arr[$i+1]['base_expr'])){
+                            $term['term'][$termk.'.keyword']=$arr[$i+1]['base_expr'];
+                            $this->Builderarr['query']['bool']['must'][0]['bool']['must'][]=$term;
+                        }else{
+                            $term['term'][$termk]=$arr[$i+1]['base_expr'];
+                            $this->Builderarr['query']['bool']['must'][0]['bool']['must'][]=$term;
+                        }
+                            unset($term['term']);
+                    }
+                    break;
+                case 'in':
+                    if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        $termk=$term_tmp_arr[1];
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                    if(isset($arr[$i+1]['sub_tree']) && !empty($arr[$i+1]['sub_tree'])){
+                        foreach ($arr[$i+1]['sub_tree'] as &$vv) {
+                            if(!is_numeric($vv['base_expr'])){
+                                $termk .='.keyword';
+                            }
+                            $this->Builderarr['query']['bool']['filter']['terms'][$termk][]=$vv['base_expr'];
+                        }
+                    }
+                    unset($termk);
+                    break;
+                case '>':
+                    if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        $termk=$term_tmp_arr[1];
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
                     if(isset($this->Builderarr['query']['bool']['must'][0])){
                         if($this->tmp_str==''){
                             $this->count_tmp++;
@@ -247,7 +306,7 @@ class EsParser {
                         $this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['time_zone']="+08:00";
                     }
                     $this->tmp_str=$termk;
-    				break;
+                    break;
                 case '>=':
                     if(strrpos($arr[$i-1]['base_expr'],".")){
                         $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
@@ -269,7 +328,7 @@ class EsParser {
                     }
                     $this->tmp_str=$termk;
                     break;
-    			case '<':
+                case '<':
                     if(strrpos($arr[$i-1]['base_expr'],".")){
                         $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
                         $termk=$term_tmp_arr[1];
@@ -327,21 +386,21 @@ class EsParser {
                     }
                     unset($term['wildcard']);
                     break;
-    		}
-    	}
+            }
+        }
     }
 
     private function groupby($arr){
-    	$aggs= array();
-    	for ($j=0; $j <count($arr); $j++) { 
-    		if(strrpos($arr[$j]['base_expr'],".")){
-    			$term_tmp_arr=explode(".",$arr[$j]['base_expr']);
-    			$termk=$term_tmp_arr[1];
-    			$termk_tmp=$termk;
-    		}else{
-    			$termk=$arr[$j]['base_expr'];
-    			$termk_tmp=$termk;
-    		}
+        $aggs= array();
+        for ($j=0; $j <count($arr); $j++) { 
+            if(strrpos($arr[$j]['base_expr'],".")){
+                $term_tmp_arr=explode(".",$arr[$j]['base_expr']);
+                $termk=$term_tmp_arr[1];
+                $termk_tmp=$termk;
+            }else{
+                $termk=$arr[$j]['base_expr'];
+                $termk_tmp=$termk;
+            }
             $tmmp=0;
             if(!is_numeric($termk)){
                 $termk .='.keyword';
@@ -450,9 +509,9 @@ class EsParser {
                 $agggs[$j][$termk_tmp.'_group']['aggs']=array();
                 $aggs[$j]=array_merge_recursive($agg[$j], $agggs[$j]);
                 unset($aggs[$j][$termk_tmp.'_group']['aggs']);
-            }	
+            }   
         }
-    	$this->agg['aggs']=$this->inverted($aggs);
+        $this->agg['aggs']=$this->inverted($aggs);
     }
 
     private function orderby($arr){
@@ -480,29 +539,39 @@ class EsParser {
     }
 
     private function limit($arr){
-    	if(!$arr['offset']){
-    		$this->limit['from']=0;
-    	}else{
-    		$this->limit['from']=$arr['offset'];
-    	}
-    	$this->limit['size']=$arr['rowcount'];
+        if(!$arr['offset']){
+            $this->limit['from']=0;
+        }else{
+            $this->limit['from']=$arr['offset'];
+        }
+        $this->limit['size']=$arr['rowcount'];
     }
 
     private function inverted($arr){
-    	for($i=count($arr)-1;$i>=0;$i--){
-			if($i>0){
-				$arr[$i-1]['aggs']=$arr[$i];
-			}
-		}
-		if(empty($arr)){
-			return array();
-		}else{
-			return $arr[0];
-		}
+        for($i=count($arr)-1;$i>=0;$i--){
+            if($i>0){
+                $arr[$i-1]['aggs']=$arr[$i];
+            }
+        }
+        if(empty($arr)){
+            return array();
+        }else{
+            return $arr[0];
+        }
     }
 
     private function select($arr){
-    	
+        
+    }
+
+    private function updateset($arr){
+        foreach ($arr as &$v) {
+            if($v['sub_tree']){
+                $tmp_sub[$v['sub_tree'][0]['base_expr']]=$v['sub_tree'][2]['base_expr'];
+                $this->Builderarr['doc']=$tmp_sub;
+                unset($tmp_sub);
+            }
+        }
     }
 
 
