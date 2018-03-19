@@ -1,7 +1,7 @@
 {
     "name": "https://github.com/qieangel2013/EsParser",
     "description": "es php library",
-    "type": "framework",
+    "type": "library",
     "keywords": ["sql","elasticsearch","restful"],
     "license": "Apache2",
     "authors": [
