@@ -35,4 +35,4 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     qq群：578276199
 ### 项目地址
     github：https://github.com/qieangel2013/EsParser
-    oschina：https://gitee.com/qieangel2013/EsParser/
+    oschina：https://gitee.com/qieangel2013/EsParser
