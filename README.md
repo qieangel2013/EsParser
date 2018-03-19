@@ -33,3 +33,6 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     该版本是基于elasticsearch5.x以上开发的，elasticsearch2.x及其以下不支持
 ### 交流使用
     qq群：578276199
+### 项目地址
+    github：https://github.com/qieangel2013/EsParser
+    oschina：https://gitee.com/qieangel2013/EsParser/
