@@ -10,7 +10,7 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     //echo $sql . "\n";
     $start = microtime(true);
     //$parser = new EsParser($sql, true);
-    $parser = new EsParser($sql, true,'http:127.0.0.1:9200');//第三个参数是es的http地址
+    $parser = new EsParser($sql, true,"http://127.0.0.1:9200");//第三个参数是es的http地址
     $stop = microtime(true);
     print_r($parser->result);//打印结果
     //print_r($parser->explain()); //打印dsl
