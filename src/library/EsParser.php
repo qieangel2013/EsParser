@@ -171,7 +171,7 @@ class EsParser {
     private function delete($arr){
     }
 
-    private function PostEs($postdata,$json=false,$token=false){
+    private function PostEs($postdata,$json=true,$token=false){
         $url=$this->url;
         $datastring = json_encode($postdata,true);
         $ch = curl_init($url);
@@ -187,7 +187,7 @@ class EsParser {
         curl_setopt($ch, CURLOPT_POSTFIELDS, $datastring);
         if ($json) {
               curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                    'Content-Type: application/json; charset=utf-8',
+                    'Content-Type: application/json;',
                     'Content-Length: ' . strlen($datastring))
                 );
         }
