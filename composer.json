@@ -13,8 +13,6 @@
     "require": {
         "php": ">=5.3"
     },
-    "autoload":{
-        "files":["src/library/EsParser.php"]
-    },
+    "classmap" : ["src/library/"],
     "minimum-stability": "dev"
 }
