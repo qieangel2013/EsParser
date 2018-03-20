@@ -301,8 +301,10 @@ class EsParser {
                         }
                     }
                     $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                    $tmp_da_str=str_replace("'","",$tmp_da_str);
+                    $is_date=strtotime($tmp_da_str)?strtotime($tmp_da_str):false;
                     $this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['gt']=$tmp_da_str;
-                    if(!isset($this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['time_zone'])){
+                    if(!isset($this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['time_zone']) && $is_date){
                         $this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['time_zone']="+08:00";
                     }
                     $this->tmp_str=$termk;
@@ -322,8 +324,10 @@ class EsParser {
                         }
                     }
                     $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                    $tmp_da_str=str_replace("'","",$tmp_da_str);
+                    $is_date=strtotime($tmp_da_str)?strtotime($tmp_da_str):false;
                     $this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['gte']=$tmp_da_str;
-                    if(!isset($this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['time_zone'])){
+                    if(!isset($this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['time_zone']) && $is_date){
                         $this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['time_zone']="+08:00";
                     }
                     $this->tmp_str=$termk;
@@ -343,8 +347,10 @@ class EsParser {
                         }
                     }
                     $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                    $tmp_da_str=str_replace("'","",$tmp_da_str);
+                    $is_date=strtotime($tmp_da_str)?strtotime($tmp_da_str):false;
                     $this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['lt']=$tmp_da_str;
-                    if(!isset($this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['time_zone'])){
+                    if(!isset($this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['time_zone']) && $is_date){
                         $this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['time_zone']="+08:00";
                     }
                     $this->tmp_str=$termk;
@@ -364,8 +370,10 @@ class EsParser {
                         }
                     }
                     $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                    $tmp_da_str=str_replace("'","",$tmp_da_str);
+                    $is_date=strtotime($tmp_da_str)?strtotime($tmp_da_str):false;
                     $this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['lte']=$tmp_da_str;
-                    if(!isset($this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['time_zone'])){
+                    if(!isset($this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['time_zone']) && $is_date){
                         $this->Builderarr['query']['bool']['must'][$this->count_tmp]['range'][$termk]['time_zone']="+08:00";
                     }
                     $this->tmp_str=$termk;
@@ -378,12 +386,20 @@ class EsParser {
                         $termk=$arr[$i-1]['base_expr'];
                     }
                     $tmp_la_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                    $tmp_la_str=str_replace("'","",$tmp_la_str);
+                    if(isset($this->Builderarr['query']['bool']['must'][0])){
+                        if($this->tmp_str==''){
+                            $this->count_tmp++;
+                        }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                            $this->count_tmp++;
+                        }
+                    }
                     if(!is_numeric($arr[$i+1]['base_expr'])){
                         $term['wildcard'][$termk.'.keyword']=str_replace("%","*",$tmp_la_str);
-                        $this->Builderarr['query']['bool']['must'][0]['bool']['must'][]=$term;
+                        $this->Builderarr['query']['bool']['must'][$this->count_tmp]['bool']['must'][]=$term;
                     }else{
                         $term['wildcard'][$termk]=str_replace("%","*",$tmp_la_str);
-                        $this->Builderarr['query']['bool']['must'][0]['bool']['must'][]=$term;
+                        $this->Builderarr['query']['bool']['must'][$this->count_tmp]['bool']['must'][]=$term;
                     }
                     unset($term['wildcard']);
                     break;
