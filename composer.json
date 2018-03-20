@@ -1,6 +1,12 @@
 {
     "name": "qieangel2013/esparser",
     "description": "es php library",
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/qieangel2013/EsParser"
+        }
+    ],
     "type": "library",
     "keywords": ["sql","elasticsearch","restful"],
     "license": "MIT",
