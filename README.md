@@ -14,7 +14,8 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     $es_config=array(
 	    'index' =>"alp_dish_sales_saas",
 	    'type'  =>"alp_dish_sales_saas",
-	    'url'   =>"http://127.0.0.1:9200"
+	    'url'   =>"http://127.0.0.1:9200",
+        'version' =>'6.x'  //1.x 2.x 5.x 6.x
 	 );
     $start = microtime(true);
     $parser = new EsParser($sql, true,$es_config);//第三个参数是es的配置参数，一定要配置
@@ -29,7 +30,8 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
 	$es_config=array(
         	'index' =>"alp_dish_sales_saas",
         	'type'  =>"alp_dish_sales_saas",
-        	'url'   =>"http://127.0.0.1:9200"
+        	'url'   =>"http://127.0.0.1:9200",
+            'version' =>'6.x'  //1.x 2.x 5.x 6.x
     	);
 	$start = microtime(true);
 	$parser = new EsParser($sql, true,$es_config);//第三个参数是es的配置参数，一定要配置
@@ -53,7 +55,7 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     *  SQL min()
     *  SQL sum()
 ### 使用注意事项
-    该版本是基于elasticsearch5.x以上开发的，elasticsearch2.x及其以下不支持
+    请在配置项填写es的版本
 ### 交流使用
     qq群：578276199
 ### 项目地址

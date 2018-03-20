@@ -9,7 +9,8 @@ $sql='select category_name cate_name,dish_name,dishsno,sale_date,sum(total_price
 $es_config=array(
 	'index' =>"alp_dish_sales_saas",
 	'type'  =>"alp_dish_sales_saas",
-	'url'   =>"http://127.0.0.1:9200"
+	'url'   =>"http://127.0.0.1:9200",
+	'version' =>'6.x'  //1.x 2.x 5.x 6.x
 );
 $start = microtime(true);
 //$parser = new EsParser($sql, true);

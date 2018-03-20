@@ -21,6 +21,7 @@ class EsParser {
     private $sort;
     private $index_es='';
     private $type_es='';
+    private $version_es='';
     private $count_tmp=0;
     private $tmp_str='';
     private $fistgroup='';
@@ -46,6 +47,7 @@ class EsParser {
             $this->index_es=$es_config['index'];
             $this->type_es=$es_config['type'];
             $this->url=$es_config['url'];
+            $this->version_es=$es_config['version'];
         }
         if ($sql) {
             $this->parse($sql, $calcPositions);
@@ -262,7 +264,7 @@ class EsParser {
                     if(isset($this->parsed['UPDATE']) && !empty($this->parsed['UPDATE'])){
                         $this->url .=$arr[$i+1]['base_expr'] ."/_update?pretty";
                     }else{
-                        if(!is_numeric($arr[$i+1]['base_expr'])){
+                        if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='5.x'){
                             $term['term'][$termk.'.keyword']=$arr[$i+1]['base_expr'];
                             $this->Builderarr['query']['bool']['must'][0]['bool']['must'][]=$term;
                         }else{
@@ -281,7 +283,7 @@ class EsParser {
                     }
                     if(isset($arr[$i+1]['sub_tree']) && !empty($arr[$i+1]['sub_tree'])){
                         foreach ($arr[$i+1]['sub_tree'] as &$vv) {
-                            if(!is_numeric($vv['base_expr'])){
+                            if(!is_numeric($vv['base_expr']) && $this->version_es=='5.x'){
                                 $termk .='.keyword';
                             }
                             $this->Builderarr['query']['bool']['filter']['terms'][$termk][]=$vv['base_expr'];
@@ -397,7 +399,7 @@ class EsParser {
                             $this->count_tmp++;
                         }
                     }
-                    if(!is_numeric($arr[$i+1]['base_expr'])){
+                    if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='5.x'){
                         $term['wildcard'][$termk.'.keyword']=str_replace("%","*",$tmp_la_str);
                         $this->Builderarr['query']['bool']['must'][$this->count_tmp]['bool']['must'][]=$term;
                     }else{
@@ -422,7 +424,7 @@ class EsParser {
                 $termk_tmp=$termk;
             }
             $tmmp=0;
-            if(!is_numeric($termk)){
+            if(!is_numeric($termk) && $this->version_es=='5.x'){
                 $termk .='.keyword';
             }
             if(isset($this->fistgroup) && $this->fistgroup==''){
