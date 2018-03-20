@@ -47,7 +47,18 @@ class EsParser {
             $this->index_es=$es_config['index'];
             $this->type_es=$es_config['type'];
             $this->url=$es_config['url'];
-            $this->version_es=$es_config['version'];
+            $version=$this->getEsData($es_config['url']);
+            if($version){
+                if(version_compare($version,'5.0.0', '<')){
+                    $this->version_es='2.x';
+                }else if( version_compare($version,'5.0.0', '>=') && version_compare($version,'6.0.0', '<')){
+                    $this->version_es='5.x';
+                }else{
+                    $this->version_es='6.x';
+                }
+            }else{
+                $this->version_es='5.x';
+            }
         }
         if ($sql) {
             $this->parse($sql, $calcPositions);
@@ -175,6 +186,33 @@ class EsParser {
 
     private function delete($arr){
     }
+
+    private function getEsData($url){
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1) ;
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_HEADER, 0);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSLVERSION, 3);
+            curl_setopt($ch, CURLOPT_BINARYTRANSFER, true) ;
+            $output = curl_exec($ch);
+            if($output === false)  //超时处理
+                { 
+                    if(curl_errno($ch) == CURLE_OPERATION_TIMEDOUT)  
+                    {  
+                     my_file_put_contents("getEsData.txt", "时间：".date('Ymd-H:i:s',time())."\r\n错误内容为：curl通过get方式请求{$url}的连接超时\r\n");
+                    }  
+            }
+            curl_close($ch);
+           $output=json_decode($output,true);
+           if (empty($output)) {
+              return array();
+            }
+            return $output['version']['number'];
+    }
+
+
 
     private function PostEs($postdata,$json=true,$token=false){
         $url=$this->url;
