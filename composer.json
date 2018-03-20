@@ -14,7 +14,7 @@
         "php": ">=5.3"
     },
     "autoload":{
-        "files":["src/library/EsParser.php"];
+        "files":["src/library/EsParser.php"]
     },
     "minimum-stability": "dev"
 }
