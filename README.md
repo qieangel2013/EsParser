@@ -22,20 +22,20 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     print_r($parser->result);//打印结果
     //print_r($parser->explain());//打印dsl
 ### 普通调用
-    require_once dirname(__FILE__) . '/src/library/EsParser.php';
-    $sql = 'select * from alp_dish_sales_saas where sid in(994,290) limit 1,10';
-    //$sql='update alp_dish_sales_saas set mid=3  where adsid=15125110';
-    //$sql='delete from alp_dish_sales_saas where adsid=15546509';
-    $es_config=array(
-        'index' =>"alp_dish_sales_saas",
-        'type'  =>"alp_dish_sales_saas",
-        'url'   =>"http://127.0.0.1:9200"
-    );
-    $start = microtime(true);
-    $parser = new EsParser($sql, true,$es_config);//第三个参数是es的配置参数，一定要配置
-    $stop = microtime(true);
-    print_r($parser->result);//打印结果
-    //print_r($parser->explain()); //打印dsl
+	require_once dirname(__FILE__) . '/src/library/EsParser.php';
+	$sql = 'select * from alp_dish_sales_saas where sid in(994,290) limit 1,10';
+    	//$sql='update alp_dish_sales_saas set mid=3  where adsid=15125110';
+    	//$sql='delete from alp_dish_sales_saas where adsid=15546509';
+    	$es_config=array(
+        	'index' =>"alp_dish_sales_saas",
+        	'type'  =>"alp_dish_sales_saas",
+        	'url'   =>"http://127.0.0.1:9200"
+    	);
+    	$start = microtime(true);
+    	$parser = new EsParser($sql, true,$es_config);//第三个参数是es的配置参数，一定要配置
+    	$stop = microtime(true);
+    	print_r($parser->result);//打印结果
+    	//print_r($parser->explain()); //打印dsl
 ### 目前支持的sql函数
     *  SQL Select
     *  SQL Delete
