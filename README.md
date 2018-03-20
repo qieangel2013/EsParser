@@ -14,11 +14,10 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     $es_config=array(
 	    'index' =>"alp_dish_sales_saas",
 	    'type'  =>"alp_dish_sales_saas",
-	    'url'   =>"http://127.0.0.1:9200"
+	    'url'   =>"http://127.0.0.1:9200",
+        'version' =>"5.x" //1.x 2.x 5.x 6.x,可以不配置，系统会请求获取版本，这样会多一次请求,建议配置一下
 	 );
-    $start = microtime(true);
     $parser = new EsParser($sql, true,$es_config);//第三个参数是es的配置参数，一定要配置
-    $stop = microtime(true);
     print_r($parser->result);//打印结果
     //print_r($parser->explain());//打印dsl
 ### 普通调用
@@ -29,11 +28,10 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
 	$es_config=array(
         	'index' =>"alp_dish_sales_saas",
         	'type'  =>"alp_dish_sales_saas",
-        	'url'   =>"http://127.0.0.1:9200"
+        	'url'   =>"http://127.0.0.1:9200",
+            'version' =>"5.x" //1.x 2.x 5.x 6.x,可以不配置，系统会请求获取版本，这样会多一次请求,建议配置一下
     	);
-	$start = microtime(true);
 	$parser = new EsParser($sql, true,$es_config);//第三个参数是es的配置参数，一定要配置
-	$stop = microtime(true);
 	print_r($parser->result);//打印结果
 	//print_r($parser->explain()); //打印dsl
 ### 目前支持的sql函数
@@ -53,7 +51,7 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     *  SQL min()
     *  SQL sum()
 ### 使用注意事项
-    请在配置项填写es的版本
+    请在配置项填写es的版本,这样系统不会请求获取版本，这样不会多一次请求,建议配置一下
 ### 交流使用
     qq群：578276199
 ### 项目地址

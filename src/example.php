@@ -9,11 +9,9 @@ $sql='select category_name cate_name,dish_name,dishsno,sale_date,sum(total_price
 $es_config=array(
 	'index' =>"alp_dish_sales_saas",
 	'type'  =>"alp_dish_sales_saas",
-	'url'   =>"http://127.0.0.1:9200"
+	'url'   =>"http://127.0.0.1:9200",
+	'version' =>"5.x" //1.x 2.x 5.x 6.x,可以不配置，系统会请求获取版本，这样会多一次请求
 );
-$start = microtime(true);
-//$parser = new EsParser($sql, true);
 $parser = new EsParser($sql, true,$es_config);//第三个参数是es的配置参数，一定要配置
-$stop = microtime(true);
 print_r($parser->result);//打印结果
 //print_r($parser->explain()); //打印dsl

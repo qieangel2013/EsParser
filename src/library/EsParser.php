@@ -39,7 +39,7 @@ class EsParser {
         if(empty($es_config)){
             $config_err=array(
                 'fail' =>1,
-                'message'=>'es的配置为空!'
+                'message'=>'es的配置项不能为空!'
                  );
             $this->result=json_encode($config_err,true);
             return $this->result;
@@ -47,18 +47,27 @@ class EsParser {
             $this->index_es=$es_config['index'];
             $this->type_es=$es_config['type'];
             $this->url=$es_config['url'];
-            $version=$this->getEsData($es_config['url']);
-            if($version){
-                if(version_compare($version,'5.0.0', '<')){
-                    $this->version_es='2.x';
-                }else if( version_compare($version,'5.0.0', '>=') && version_compare($version,'6.0.0', '<')){
-                    $this->version_es='5.x';
+            if(!isset($es_config['version'])){
+                $version=$this->getEsData($es_config['url']);
+                if($version){
+                    if(version_compare($version,'5.0.0', '<')){
+                        $this->version_es='2.x';
+                    }else if( version_compare($version,'5.0.0', '>=') && version_compare($version,'6.0.0', '<')){
+                        $this->version_es='5.x';
+                    }else{
+                        $this->version_es='6.x';
+                    }
                 }else{
-                    $this->version_es='6.x';
+                    $this->version_es='5.x';
                 }
             }else{
-                $this->version_es='5.x';
+                if(trim($es_config['version'])==''){
+                    $this->version_es='5.x';
+                }else{
+                    $this->version_es=$es_config['version'];
+                }
             }
+            
         }
         if ($sql) {
             $this->parse($sql, $calcPositions);
