@@ -377,11 +377,12 @@ class EsParser {
                     }else{
                         $termk=$arr[$i-1]['base_expr'];
                     }
+                    $tmp_la_str=str_replace('"','',$arr[$i+1]['base_expr']);
                     if(!is_numeric($arr[$i+1]['base_expr'])){
-                        $term['wildcard'][$termk.'.keyword']=str_replace("%","*",$arr[$i+1]['base_expr']);
+                        $term['wildcard'][$termk.'.keyword']=str_replace("%","*",$tmp_la_str);
                         $this->Builderarr['query']['bool']['must'][0]['bool']['must'][]=$term;
                     }else{
-                        $term['wildcard'][$termk]=str_replace("%","*",$arr[$i+1]['base_expr']);
+                        $term['wildcard'][$termk]=str_replace("%","*",$tmp_la_str);
                         $this->Builderarr['query']['bool']['must'][0]['bool']['must'][]=$term;
                     }
                     unset($term['wildcard']);
