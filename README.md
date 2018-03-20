@@ -23,8 +23,7 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     //print_r($parser->explain());//打印dsl
 ### 普通调用
     require_once dirname(__FILE__) . '/src/library/EsParser.php';
-    //$sql = 'select * from alp_dish_sales_saas where sid in(994,290) limit 0,10';
-    $sql='select category_name cate_name,dish_name,dishsno,sale_date,sum(total_price) total_price,sum(total_count) 	total_count,category_name,sku_name properties from alp_dish_sales_saas where sale_date>="2017-01-01" and sale_date<="2017-09-03" and sid in(994,290) limit 3,10';
+    $sql = 'select * from alp_dish_sales_saas where sid in(994,290) limit 1,10';
     //$sql='update alp_dish_sales_saas set mid=3  where adsid=15125110';
     //$sql='delete from alp_dish_sales_saas where adsid=15546509';
     $es_config=array(
