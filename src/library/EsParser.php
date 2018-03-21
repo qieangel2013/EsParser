@@ -278,7 +278,9 @@ class EsParser {
         }else{
             $total_str=$output['hits']['total'];
             if(isset($this->parsed['GROUP']) && !empty($this->parsed['GROUP'])){
-                if(empty($output['aggregations'][$this->fistgroup]['buckets'])){
+                if($output['hits']['hits']){
+                    $outputs['result']=array_slice($output['hits']['hits'],-$this->limit['size']);
+                }else if(isset($output['aggregations'][$this->fistgroup]['buckets']) && empty($output['aggregations'][$this->fistgroup]['buckets'])){
                     $outputs['result']=$output['aggregations'][$this->fistgroup]['buckets'];
                 }else{
                     $outputs['result']=array_slice($output['aggregations'][$this->fistgroup]['buckets'],-$this->limit['size']);
@@ -480,7 +482,7 @@ class EsParser {
                 $termk_tmp=$termk;
             }
             $tmmp=0;
-            if(!is_numeric($termk) && $this->version_es=='5.x'){
+            if(!is_numeric($termk) && ($this->version_es=='5.x' || $this->version_es=='6.x')){
                 $termk .='.keyword';
             }
             if(isset($this->fistgroup) && $this->fistgroup==''){
