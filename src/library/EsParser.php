@@ -116,10 +116,6 @@ class EsParser {
     }
 
     private function EsBuilder(){
-        //select
-        if(isset($this->parsed['SELECT']) && !empty($this->parsed['SELECT'])){
-            $this->select($this->parsed['SELECT']);
-        }
         //table
         if(isset($this->parsed['FROM']) && !empty($this->parsed['FROM'])){
             $this->table($this->parsed['FROM']);
@@ -163,6 +159,10 @@ class EsParser {
             if(!empty($this->sort['sort'])){
                 $this->Builderarr['sort']=$this->sort['sort'];
             }
+        }
+        //select
+        if(isset($this->parsed['SELECT']) && !empty($this->parsed['SELECT'])){
+            $this->select($this->parsed['SELECT']);
         }
         if(!isset($this->Builderarr) && empty($this->Builderarr)){
             $this->Builderarr['query']['match_all']=(object)array();
@@ -296,7 +296,11 @@ class EsParser {
                     $outputs['result']=array_slice($output['aggregations'][$this->fistgroup]['buckets'],-$this->limit['size']);
                 }
             }else{
-                $outputs['result']=$output['hits']['hits'];
+                if(isset($output['aggregations']) && !empty($output['aggregations'])){
+                    $outputs['result']=$output['aggregations'];
+                }else{
+                    $outputs['result']=$output['hits']['hits'];
+                }
             }
             $outputs['total']=$total_str;
             $this->result=json_encode($outputs,true);
@@ -899,7 +903,34 @@ class EsParser {
     }
 
     private function select($arr){
-        
+        if(isset($this->parsed['GROUP']) && !empty($this->parsed['GROUP'])){
+        }else{
+            foreach ($arr as $k => $v) {
+                if($v['expr_type']=='aggregate_function'){
+                     if(strrpos($v['sub_tree'][0]['base_expr'],".")){
+                        $term_tmp_arrs=explode(".",$v['sub_tree'][0]['base_expr']);
+                        if($term_tmp_arrs[1]=='*'){
+                            continue;
+                        }
+                        if(isset($v['alias']['name'])){
+                            $this->Builderarr['aggs'][$v['alias']['name']]['stats']['field']=$term_tmp_arrs[1];
+                        }else{
+                            $this->Builderarr['aggs'][$v['sub_tree'][0]['base_expr']]['stats']['field']=$term_tmp_arrs[1];
+                        }
+                        
+                    }else{
+                        if($v['sub_tree'][0]['base_expr']=='*'){
+                            continue;
+                        }
+                        if(isset($v['alias']['name'])){
+                            $this->Builderarr['aggs'][$v['alias']['name']]['stats']['field']=$v['sub_tree'][0]['base_expr'];
+                        }else{
+                            $this->Builderarr['aggs'][$v['sub_tree'][0]['base_expr']]['stats']['field']=$v['sub_tree'][0]['base_expr'];
+                        }  
+                    }
+                }
+            }
+        }        
     }
 
     private function updateset($arr){
@@ -911,13 +942,5 @@ class EsParser {
             }
         }
     }
-
-
-
-
-
-
-
-
 }
 ?>
