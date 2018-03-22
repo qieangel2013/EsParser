@@ -409,7 +409,7 @@ class EsParser {
                     }else{
                         $termk=$arr[$i-1]['base_expr'];
                     }
-                    if(isset($this->Builderarr['query']['bool']['filter'][0]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
+                    if(isset($this->Builderarr['query']['bool']['filter'][0]) && $this->tmp_lock!='' && $this->tmp_lock==$lowerstr){
                         if($this->tmp_str_filter==''){
                             $this->count_tmp_filter++;
                         }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
