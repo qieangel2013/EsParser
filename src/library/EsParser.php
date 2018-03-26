@@ -288,9 +288,9 @@ class EsParser {
         }else{
             $total_str=$output['hits']['total'];
             if(isset($this->parsed['GROUP']) && !empty($this->parsed['GROUP'])){
-                if($output['hits']['hits']){
+                if($output['hits']['hits'] && empty($output['aggregations'][$this->fistgroup]['buckets'])){
                     $outputs['result']=array_slice($output['hits']['hits'],-$this->limit['size']);
-                }else if(isset($output['aggregations'][$this->fistgroup]['buckets']) && empty($output['aggregations'][$this->fistgroup]['buckets'])){
+                }else if(isset($output['aggregations'][$this->fistgroup]['buckets']) && !empty($output['aggregations'][$this->fistgroup]['buckets'])){
                     $outputs['result']=$output['aggregations'][$this->fistgroup]['buckets'];
                 }else{
                     $outputs['result']=array_slice($output['aggregations'][$this->fistgroup]['buckets'],-$this->limit['size']);
@@ -731,25 +731,62 @@ class EsParser {
     }
 
 
+    private function listtree($arr,$aggs,$order){
+        $countmp=0;
+        for($i=count($arr)-1;$i>=0;$i--){
+            if(isset($arr[$i-1])){
+                $key_arr=array_keys($arr[$i]);
+                if($countmp==0){
+                    $arr[$i][$key_arr[0]]['terms']['size']=$this->limit['from']*$this->limit['size']==0?10:($this->limit['from'] + 1 )*$this->limit['size'];
+                    if($aggs['aggs']){
+                        $arr[$i][$key_arr[0]]['aggs']=$aggs['aggs'];
+                    }
+                    if($order){
+                        $arr[$i][$key_arr[0]]['terms']['order']=$order['order'];
+                    }
+                    $arr[$i][$key_arr[0]]['aggs']['top']['top_hits']['size']=$this->top_hits;
+                    $countmp=1;
+                }
+                $key_pre=array_keys($arr[$i-1]);
+                $arr[$i-1][$key_pre[0]]['aggs']=$arr[$i];
+                unset($arr[$i]);
+            }else{
+                if(count($arr)==1 && $countmp==0){
+                    $key_arrs=array_keys($arr[$i]);
+                    $arr[$i][$key_arrs[0]]['terms']['size']=$this->limit['from']*$this->limit['size']==0?10:($this->limit['from'] + 1 )*$this->limit['size'];
+                    $arr[$i][$key_arrs[0]]['aggs']['top']['top_hits']['size']=$this->top_hits;
+                    $countmp=1;
+                }
+            }
+        }
+        return $arr;
+    }
+
+
 
     private function groupby($arr){
         $aggs= array();
-        for ($j=0; $j <count($arr); $j++) { 
-            if(strrpos($arr[$j]['base_expr'],".")){
-                $term_tmp_arr=explode(".",$arr[$j]['base_expr']);
-                $termk=$term_tmp_arr[1];
-                $termk_tmp=$termk;
+        $agg= array();
+        $agg_orderby=array();
+        for($i=0; $i <count($arr); $i++) {
+            if(strrpos($arr[$i]['base_expr'],".")){
+                $term_tmp_arr=explode(".",$arr[$i]['base_expr']);
+                if($term_tmp_arr[1]!='keyword'){
+                    $termk=$term_tmp_arr[1];
+                    $termk_tmp=$termk;
+                }else{
+                    $termk=$arr[$i]['base_expr'];
+                    $termk_tmp=$term_tmp_arr[0];
+                }
             }else{
-                $termk=$arr[$j]['base_expr'];
+                $termk=$arr[$i]['base_expr'];
                 $termk_tmp=$termk;
-            }
-            $tmmp=0;
-            if(!is_numeric($termk) && ($this->version_es=='5.x' || $this->version_es=='6.x')){
-                $termk .='.keyword';
             }
             if(isset($this->fistgroup) && $this->fistgroup==''){
                 $this->fistgroup=$termk_tmp.'_group';
             }
+            $agg[$i][$termk_tmp.'_group']['terms']['field']=$termk;
+        }
             if(isset($this->parsed['SELECT']) && !empty($this->parsed['SELECT'])){
                 foreach ($this->parsed['SELECT'] as $v) {
                     $this->top_hits=1;
@@ -760,8 +797,6 @@ class EsParser {
                             $lowerstr = strtolower($v['base_expr']);
                             switch ($lowerstr) {
                                 case 'count':
-                                    $agg[$j][$termk_tmp.'_group']['terms']['field']=$termk;
-                                    $agg[$j][$termk_tmp.'_group']['terms']['size']=$this->limit['from']*$this->limit['size']==0?10:($this->limit['from'] + 1 )*$this->limit['size'];
                                     if(strrpos($v['sub_tree'][0]['base_expr'],".")){
                                         $term_tmp_arrs=explode(".",$v['sub_tree'][0]['base_expr']);
                                         $cardinalitys[$v['alias']['name']]['cardinality']['field']=$term_tmp_arrs[1];
@@ -769,12 +804,11 @@ class EsParser {
                                         $cardinalitys[$v['alias']['name']]['cardinality']['field']=$v['sub_tree'][0]['base_expr'];
                                     }
                                     $tmmp=1;
-                                    $agggs[$j][$termk_tmp.'_group']['aggs']=$cardinalitys;
-                                    $aggs[$j]=array_merge_recursive($agg[$j], $agggs[$j]);
+                                    $agggs['aggs']=$cardinalitys;
+                                    $aggs=array_merge_recursive($aggs, $agggs);
+                                    unset($cardinalitys);
                                     break;
                                 case 'sum':
-                                    $agg[$j][$termk_tmp.'_group']['terms']['field']=$termk;
-                                    $agg[$j][$termk_tmp.'_group']['terms']['size']=$this->limit['from']*$this->limit['size']==0?10:($this->limit['from'] + 1 )*$this->limit['size'];
                                     if(strrpos($v['sub_tree'][0]['base_expr'],".")){
                                         $term_tmp_arrs=explode(".",$v['sub_tree'][0]['base_expr']);
                                         $cardinalitys[$v['alias']['name']]['sum']['field']=$term_tmp_arrs[1];
@@ -782,12 +816,11 @@ class EsParser {
                                         $cardinalitys[$v['alias']['name']]['sum']['field']=$v['sub_tree'][0]['base_expr'];
                                     }
                                     $tmmp=1;
-                                    $agggs[$j][$termk_tmp.'_group']['aggs']=$cardinalitys;
-                                    $aggs[$j]=array_merge_recursive($agg[$j], $agggs[$j]);
+                                    $agggs['aggs']=$cardinalitys;
+                                    $aggs=array_merge_recursive($aggs, $agggs);
+                                    unset($cardinalitys);
                                     break;
                                 case 'min':
-                                    $agg[$j][$termk_tmp.'_group']['terms']['field']=$termk;
-                                    $agg[$j][$termk_tmp.'_group']['terms']['size']=$this->limit['from']*$this->limit['size']==0?10:($this->limit['from'] + 1 )*$this->limit['size'];
                                     if(strrpos($v['sub_tree'][0]['base_expr'],".")){
                                         $term_tmp_arrs=explode(".",$v['sub_tree'][0]['base_expr']);
                                         $cardinalitys[$v['alias']['name']]['min']['field']=$term_tmp_arrs[1];
@@ -795,12 +828,11 @@ class EsParser {
                                         $cardinalitys[$v['alias']['name']]['min']['field']=$v['sub_tree'][0]['base_expr'];
                                     }
                                     $tmmp=1;
-                                    $agggs[$j][$termk_tmp.'_group']['aggs']=$cardinalitys;
-                                    $aggs[$j]=array_merge_recursive($agg[$j], $agggs[$j]);
+                                    $agggs['aggs']=$cardinalitys;
+                                    $aggs=array_merge_recursive($aggs, $agggs);
+                                    unset($cardinalitys);
                                     break;
                                 case 'max':
-                                    $agg[$j][$termk_tmp.'_group']['terms']['field']=$termk;
-                                    $agg[$j][$termk_tmp.'_group']['terms']['size']=$this->limit['from']*$this->limit['size']==0?10:($this->limit['from'] + 1 )*$this->limit['size'];
                                     if(strrpos($v['sub_tree'][0]['base_expr'],".")){
                                         $term_tmp_arrs=explode(".",$v['sub_tree'][0]['base_expr']);
                                         $cardinalitys[$v['alias']['name']]['max']['field']=$term_tmp_arrs[1];
@@ -808,12 +840,11 @@ class EsParser {
                                         $cardinalitys[$v['alias']['name']]['max']['field']=$v['sub_tree'][0]['base_expr'];
                                     }
                                     $tmmp=1;
-                                    $agggs[$j][$termk_tmp.'_group']['aggs']=$cardinalitys;
-                                    $aggs[$j]=array_merge_recursive($agg[$j], $agggs[$j]);
+                                    $agggs['aggs']=$cardinalitys;
+                                    $aggs=array_merge_recursive($aggs, $agggs);
+                                    unset($cardinalitys);
                                     break;
                                 case 'avg':
-                                    $agg[$j][$termk_tmp.'_group']['terms']['field']=$termk;
-                                    $agg[$j][$termk_tmp.'_group']['terms']['size']=$this->limit['from']*$this->limit['size']==0?10:($this->limit['from'] + 1 )*$this->limit['size'];
                                     if(strrpos($v['sub_tree'][0]['base_expr'],".")){
                                         $term_tmp_arrs=explode(".",$v['sub_tree'][0]['base_expr']);
                                         $cardinalitys[$v['alias']['name']]['avg']['field']=$term_tmp_arrs[1];
@@ -821,29 +852,20 @@ class EsParser {
                                         $cardinalitys[$v['alias']['name']]['avg']['field']=$v['sub_tree'][0]['base_expr'];
                                     }
                                     $tmmp=1;
-                                    $agggs[$j][$termk_tmp.'_group']['aggs']=$cardinalitys;
-                                    $aggs[$j]=array_merge_recursive($agg[$j], $agggs[$j]);
+                                    $agggs['aggs']=$cardinalitys;
+                                    $aggs=array_merge_recursive($aggs, $agggs);
+                                    unset($cardinalitys);
                                     break;
                             }
                             if(isset($this->parsed['ORDER']) && !empty($this->parsed['ORDER'])){
                                 foreach ($this->parsed['ORDER'] as $vv) {
                                     if($vv['base_expr']==$v['alias']['name']){
-                                        $aggs[$j][$termk_tmp.'_group']['terms']['order'][$vv['base_expr']]=$vv['direction'];
-                                         if(strrpos($v['sub_tree'][0]['base_expr'],".")){
-                                            $term_tmp_arrss=explode(".",$v['sub_tree'][0]['base_expr']);
-                                            $aggs[$j][$termk_tmp.'_group']['aggs'][$vv['base_expr']][$lowerstr]['field']=$term_tmp_arrs[1];
-                                        }else{
-                                            $aggs[$j][$termk_tmp.'_group']['aggs'][$vv['base_expr']][$lowerstr]['field']=$v['sub_tree'][0]['base_expr'];
-                                        }
+                                        $agg_orderby['order'][$vv['base_expr']]=$vv['direction'];
                                     }
                                 }
                             }
-                            if($this->top_hits){
-                                $aggs[$j][$termk_tmp.'_group']['aggs']['top']['top_hits']['size']=$this->top_hits;
-                            }
                         }
                     }
-            }
         }
             if($tmmp==0){
                  $agg[$j][$termk_tmp.'_group']['terms']['field']=$termk;
@@ -853,7 +875,7 @@ class EsParser {
                 unset($aggs[$j][$termk_tmp.'_group']['aggs']);
             }   
         }
-        $this->agg['aggs']=$this->inverted($aggs);
+         $this->agg['aggs']=$this->listtree($agg,$aggs,$agg_orderby)[0];
     }
 
     private function orderby($arr){
@@ -887,19 +909,6 @@ class EsParser {
             $this->limit['from']=$arr['offset'];
         }
         $this->limit['size']=$arr['rowcount'];
-    }
-
-    private function inverted($arr){
-        for($i=count($arr)-1;$i>=0;$i--){
-            if($i>0){
-                $arr[$i-1]['aggs']=$arr[$i];
-            }
-        }
-        if(empty($arr)){
-            return array();
-        }else{
-            return $arr[0];
-        }
     }
 
     private function select($arr){
