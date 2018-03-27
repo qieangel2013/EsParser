@@ -8,9 +8,11 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     }
     composer install
     require __DIR__.'/vendor/autoload.php';
-    $sql = 'select * from alp_dish_sales_saas where sid in(994,290) limit 1,10';
+    //$sql = 'select * from alp_dish_sales_saas where sid in(994,290) limit 1,10';
     //$sql='update alp_dish_sales_saas set mid=3  where adsid=15125110';
     //$sql='delete from alp_dish_sales_saas where adsid=15546509';
+    $sql="select *,concat_ws('_',category_name.keyword,dish_name.keyword,sku_name.keyword) as dfg from alp_dish_sales_saas
+                where sale_date>'2017-01-01' and sale_date<'2017-09-02' group by dfg order by total_count desc";
     $es_config=array(
 	    'index' =>"alp_dish_sales_saas",
 	    'type'  =>"alp_dish_sales_saas",
@@ -22,9 +24,11 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     //print_r($parser->explain());//打印dsl
 ### 普通调用
 	require_once dirname(__FILE__) . '/src/library/EsParser.php';
-	$sql = 'select * from alp_dish_sales_saas where sid in(994,290) limit 1,10';
+	//$sql = 'select * from alp_dish_sales_saas where sid in(994,290) limit 1,10';
 	//$sql='update alp_dish_sales_saas set mid=3  where adsid=15125110';
 	//$sql='delete from alp_dish_sales_saas where adsid=15546509';
+    $sql="select *,concat_ws('_',category_name.keyword,dish_name.keyword,sku_name.keyword) as dfg from alp_dish_sales_saas
+                where sale_date>'2017-01-01' and sale_date<'2017-09-02' group by dfg order by total_count desc";
 	$es_config=array(
         	'index' =>"alp_dish_sales_saas",
         	'type'  =>"alp_dish_sales_saas",
@@ -52,6 +56,7 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     *  SQL sum()
     *  SQL Between
     *  SQL Aliases
+    *  SQL concat_ws
 ### 使用注意事项
     请在配置项填写es的版本,这样系统不会请求获取版本，这样不会多一次请求,建议配置一下
 ### 交流使用
