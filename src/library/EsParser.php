@@ -796,7 +796,9 @@ class EsParser {
             if(isset($arr[$i-1])){
                 $key_arr=array_keys($arr[$i]);
                 if($countmp==0){
-                    $arr[$i][$key_arr[0]]['terms']['size']=$this->limit['from']*$this->limit['size']==0?10:($this->limit['from'] + 1 )*$this->limit['size'];
+                    if(!isset($arr[$i][$key_arr[0]]['date_histogram'])){
+                        $arr[$i][$key_arr[0]]['terms']['size']=$this->limit['from']*$this->limit['size']==0?10:($this->limit['from'] + 1 )*$this->limit['size'];
+                    }
                     if($aggs['aggs']){
                         $arr[$i][$key_arr[0]]['aggs']=$aggs['aggs'];
                     }
@@ -812,7 +814,9 @@ class EsParser {
             }else{
                 if(count($arr)==1 && $countmp==0){
                     $key_arrs=array_keys($arr[$i]);
-                    $arr[$i][$key_arrs[0]]['terms']['size']=$this->limit['from']*$this->limit['size']==0?10:($this->limit['from'] + 1 )*$this->limit['size'];
+                    if(!isset($arr[$i][$key_arrs[0]]['date_histogram'])){
+                        $arr[$i][$key_arrs[0]]['terms']['size']=$this->limit['from']*$this->limit['size']==0?10:($this->limit['from'] + 1 )*$this->limit['size'];
+                    }
                     $arr[$i][$key_arrs[0]]['aggs']['top']['top_hits']['size']=$this->top_hits;
                     $countmp=1;
                 }
@@ -939,6 +943,52 @@ class EsParser {
                                         }
                                     }
                                     break;
+                                case 'date_format':
+                                    $tmp_script='';
+                                    $tmp_ps='';
+                                    if(isset($v['alias']) && !empty($v['alias'])){
+                                        foreach ($agg as $kk => $ve) {
+                                            $key_arr=array_keys($ve);
+                                            if($v['alias']['name']==$ve[$key_arr[0]]['terms']['field']){
+                                                for ($jj=0;$jj<=count($v['sub_tree'])-1;$jj++) {
+                                                    if($v['sub_tree'][$jj]['expr_type']=='const'){
+                                                        $tmp_ps=str_replace('"','',$v['sub_tree'][$jj]['base_expr']);
+                                                        $tmp_ps=str_replace("'","",$tmp_ps);
+                                                        $tmp_ps=str_replace("%","",$tmp_ps);
+                                                        $tmp_ps=str_replace("/","",$tmp_ps);
+                                                        $tmp_ps=str_replace("-","",$tmp_ps);
+                                                        switch ($tmp_ps) {
+                                                            case 'Ymd':
+                                                                $agg[$kk][$key_arr[0]]['date_histogram']['interval']="day";
+                                                                break;
+                                                            case 'Ym':
+                                                                $agg[$kk][$key_arr[0]]['date_histogram']['interval']="month";
+                                                                break;
+                                                            case 'Y':
+                                                                $agg[$kk][$key_arr[0]]['date_histogram']['interval']="year";
+                                                                break;
+                                                            case 'Yu':
+                                                                $agg[$kk][$key_arr[0]]['date_histogram']['interval']="week";
+                                                                break;
+                                                            case 'H':
+                                                                $agg[$kk][$key_arr[0]]['date_histogram']['interval']="hour";
+                                                                break;
+                                                            case 'i':
+                                                                $agg[$kk][$key_arr[0]]['date_histogram']['interval']="minute";
+                                                                break;
+                                                        }
+                                                    }
+                                                    if($v['sub_tree'][$jj]['expr_type']=='colref'){
+                                                        $agg[$kk][$key_arr[0]]['date_histogram']['field']=$v['sub_tree'][$jj]['base_expr'];
+                                                        $agg[$kk][$key_arr[0]]['date_histogram']['format']="yyyy-MM-dd";
+                                                        $agg[$kk][$key_arr[0]]['date_histogram']['time_zone']="+08:00";
+                                                        unset($agg[$kk][$key_arr[0]]['terms']);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    break;    
                             }
                             if(isset($this->parsed['ORDER']) && !empty($this->parsed['ORDER'])){
                                 foreach ($this->parsed['ORDER'] as $vv) {
