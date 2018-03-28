@@ -137,10 +137,13 @@ class EsParser {
             $this->limit($this->parsed['LIMIT']);
             if(isset($this->parsed['GROUP']) && !empty($this->parsed['GROUP'])){
                 $this->Builderarr['size']=0;
+                $this->limit($this->parsed['LIMIT']);
             }else{
                 $this->Builderarr['from']=$this->limit['from'] * $this->limit['size'];
                 $this->Builderarr['size']=$this->limit['size'];
             }
+        }else{
+            $this->limit(array());
         }
         //where
         if(isset($this->parsed['WHERE']) && !empty($this->parsed['WHERE'])){
@@ -1029,12 +1032,16 @@ class EsParser {
     }
 
     private function limit($arr){
-        if(!$arr['offset']){
+         if(!isset($arr['offset'])){
             $this->limit['from']=0;
         }else{
             $this->limit['from']=$arr['offset'];
         }
-        $this->limit['size']=$arr['rowcount'];
+        if(!isset($arr['rowcount'])){
+            $this->limit['size']=10;
+        }else{
+            $this->limit['size']=$arr['rowcount'];
+        }
     }
 
     private function select($arr){
