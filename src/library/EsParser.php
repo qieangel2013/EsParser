@@ -291,7 +291,7 @@ class EsParser {
                 if($output['hits']['hits'] && empty($output['aggregations'][$this->fistgroup]['buckets'])){
                     $outputs['result']=array_slice($output['hits']['hits'],-$this->limit['size']);
                 }else if(isset($output['aggregations'][$this->fistgroup]['buckets']) && !empty($output['aggregations'][$this->fistgroup]['buckets'])){
-                    $outputs['result']=$output['aggregations'][$this->fistgroup]['buckets'];
+                    $outputs['result']=$output['aggregations'];
                 }else{
                     $outputs['result']=array_slice($output['aggregations'][$this->fistgroup]['buckets'],-$this->limit['size']);
                 }
@@ -797,7 +797,7 @@ class EsParser {
                 $key_arr=array_keys($arr[$i]);
                 if($countmp==0){
                     if(!isset($arr[$i][$key_arr[0]]['date_histogram'])){
-                        $arr[$i][$key_arr[0]]['terms']['size']=$this->limit['from']*$this->limit['size']==0?10:($this->limit['from'] + 1 )*$this->limit['size'];
+                        $arr[$i][$key_arr[0]]['terms']['size']=($this->limit['from'] + 1 )*$this->limit['size'];
                     }
                     if($aggs['aggs']){
                         $arr[$i][$key_arr[0]]['aggs']=$aggs['aggs'];
@@ -815,7 +815,7 @@ class EsParser {
                 if(count($arr)==1 && $countmp==0){
                     $key_arrs=array_keys($arr[$i]);
                     if(!isset($arr[$i][$key_arrs[0]]['date_histogram'])){
-                        $arr[$i][$key_arrs[0]]['terms']['size']=$this->limit['from']*$this->limit['size']==0?10:($this->limit['from'] + 1 )*$this->limit['size'];
+                        $arr[$i][$key_arrs[0]]['terms']['size']=($this->limit['from'] + 1 )*$this->limit['size'];
                     }
                     $arr[$i][$key_arrs[0]]['aggs']['top']['top_hits']['size']=$this->top_hits;
                     $countmp=1;
@@ -846,9 +846,9 @@ class EsParser {
                 $termk_tmp=$termk;
             }
             if(isset($this->fistgroup) && $this->fistgroup==''){
-                $this->fistgroup=$termk_tmp.'_group';
+                $this->fistgroup=$termk_tmp;
             }
-            $agg[$i][$termk_tmp.'_group']['terms']['field']=$termk;
+            $agg[$i][$termk_tmp]['terms']['field']=$termk;
         }
             if(isset($this->parsed['SELECT']) && !empty($this->parsed['SELECT'])){
                 foreach ($this->parsed['SELECT'] as $v) {
