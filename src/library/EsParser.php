@@ -1023,7 +1023,11 @@ class EsParser {
         foreach ($arr as &$va) {
             if(strrpos($va['base_expr'],".")){
                 $term_tmp_arr=explode(".",$va['base_expr']);
-                $termk=$term_tmp_arr[1];
+                if($term_tmp_arr[1]!='keyword'){
+                    $termk=$term_tmp_arr[1];
+                }else{
+                    $termk=$va['base_expr'];
+                }
             }else{
                 $termk=$va['base_expr'];
             }
