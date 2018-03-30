@@ -383,6 +383,9 @@ class EsParser {
             }
             switch ($lowerstr) {
                 case '=':
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
                     if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='or' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='or'){
                         if(strrpos($arr[$i-1]['base_expr'],".")){
                             $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
