@@ -296,14 +296,14 @@ class EsParser {
                     $counter=($this->limit['from'] + 1 )*$this->limit['size'];
                     if($tmp_counter<$counter){
                         $page=ceil($tmp_counter/$this->limit['size']);
-                        $outputs['page']=$page;
+                        $outputs['page']=$page==0?1:$page;
                         $outputs['result']=array_slice($output['hits']['hits'],($page-1)*$this->limit['size'],$tmp_counter-(($page-1)*$this->limit['size']));
                     }else if($tmp_counter==$counter){
                         $outputs['page']=$this->limit['from']+1;
                         $outputs['result']=array_slice($output['hits']['hits'],-$this->limit['size']);
                     }else{
                         $page=$this->limit['from']+1;
-                        $outputs['page']=$page;
+                        $outputs['page']=$page==0?1:$page;
                         $outputs['result']=array_slice($output['hits']['hits'],($page-1)*$this->limit['size'],$this->limit['size']);
                     }
                 }else if(isset($output['aggregations'][$this->fistgroup]['buckets']) && !empty($output['aggregations'][$this->fistgroup]['buckets'])){
@@ -311,14 +311,14 @@ class EsParser {
                     $counter=($this->limit['from'] + 1 )*$this->limit['size'];
                     if($tmp_counter<$counter){
                         $page=ceil($tmp_counter/$this->limit['size']);
-                        $outputs['page']=$page;
+                        $outputs['page']=$page==0?1:$page;
                         $outputs['result'][$this->fistgroup]['buckets']=array_slice($output['aggregations'][$this->fistgroup]['buckets'],($page-1)*$this->limit['size'],$tmp_counter-(($page-1)*$this->limit['size']));
                     }else if($tmp_counter==$counter){
                         $outputs['page']=$this->limit['from']+1;
                         $outputs['result'][$this->fistgroup]['buckets']=array_slice($output['aggregations'][$this->fistgroup]['buckets'],-$this->limit['size']);
                     }else{
                         $page=$this->limit['from']+1;
-                        $outputs['page']=$page;
+                        $outputs['page']=$page==0?1:$page;
                         $outputs['result'][$this->fistgroup]['buckets']=array_slice($output['aggregations'][$this->fistgroup]['buckets'],($page-1)*$this->limit['size'],$this->limit['size']);
                     }
                 }else{
@@ -326,7 +326,7 @@ class EsParser {
                     $counter=($this->limit['from'] + 1 )*$this->limit['size'];
                     if($tmp_counter<$counter){
                         $page=ceil($tmp_counter/$this->limit['size']);
-                        $outputs['page']=$page;
+                        $outputs['page']=$page==0?1:$page;
                         $outputs['result']=array_slice($output['aggregations'][$this->fistgroup]['buckets'],($page-1)*$this->limit['size'],$tmp_counter-(($page-1)*$this->limit['size']));
                     }else if($tmp_counter==$counter){
                         $outputs['page']=$this->limit['from']+1;
@@ -337,6 +337,15 @@ class EsParser {
                 if(isset($output['aggregations']) && !empty($output['aggregations'])){
                     $outputs['result']=$output['aggregations'];
                 }else{
+                    $page_tmp=ceil($total_str/$this->limit['size']);
+                    $page=$this->limit['from'] + 1 ;
+                    if($page_tmp>=$page){
+                    }else{
+                        $page=$page_tmp;
+                        $this->Builderarr['from']=($page_tmp-1) * $this->limit['size'];
+                        $this->Builderarr['size']=$this->limit['size'];
+                    }
+                    $outputs['page']=$page==0?1:$page;
                     $outputs['result']=$output['hits']['hits'];
                 }
             }
@@ -380,14 +389,16 @@ class EsParser {
                         $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
                         $tmp_da_str=str_replace("'","",$tmp_da_str);
 
-                        if(isset($this->Builderarr['query']['bool']['filter'][0]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
+                        if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
                             if($this->tmp_str_filter==''){
                                 $this->count_tmp_filter++;
                             }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
                                 $this->count_tmp_filter++;
                             }
-                        }
-                        if(isset($this->Builderarr['query']['bool']['filter'][0]['bool']['must'][0]) && $this->tmp_lock_str!='' && $this->tmp_lock_str!=$lowerstr){
+                        }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp_filter++;
+                            }
+                        if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][0]) && $this->tmp_lock_str!='' && $this->tmp_lock_str!=$lowerstr){
                             if($this->tmp_str==''){
                                 $this->count_tmp++;
                             }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
@@ -417,7 +428,7 @@ class EsParser {
                         }
                         $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
                         $tmp_da_str=str_replace("'","",$tmp_da_str);
-                        if(isset($this->Builderarr['query']['bool']['filter'][0]) && $this->tmp_lock_str!='' && $this->tmp_lock_str!=$lowerstr){
+                        if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock_str!='' && $this->tmp_lock_str!=$lowerstr){
                             if($this->tmp_str==''){
                                 $this->count_tmp++;
                             }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
@@ -433,19 +444,22 @@ class EsParser {
                                 }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
                                     $this->count_tmp_filter++;
                                 }
+                            }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp_filter++;
                             }
                             if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
                                 $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
-                                $this->Builderarr['query']['bool']['filter'][$this->tmp_str_filter]['bool']['must'][]=$term;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][]=$term;
                             }else{
                                 $term['match_phrase'][$termk]['query']=$tmp_da_str;
-                                $this->Builderarr['query']['bool']['filter'][$this->tmp_str_filter]['bool']['must'][]=$term;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][]=$term;
                             }
                                 unset($term['match_phrase']);
                         }
                         $this->tmp_lock_str=$lowerstr;
                     }
                     $this->tmp_lock=$lowerstr;
+                    $this->tmp_str=$lowerstr;
                     break;
                 case 'in':
                     if(strrpos($arr[$i-1]['base_expr'],".")){
@@ -1039,7 +1053,8 @@ class EsParser {
                     }
             }
         }
-         $this->agg['aggs']=$this->listtree($agg,$aggs,$agg_orderby)[0];
+         $tmp_tree=$this->listtree($agg,$aggs,$agg_orderby);
+         $this->agg['aggs']=$tmp_tree[0];
     }
 
     private function orderby($arr){
