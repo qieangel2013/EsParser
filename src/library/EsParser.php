@@ -906,6 +906,12 @@ class EsParser {
                     $key_arrs=array_keys($arr[$i]);
                     if(!isset($arr[$i][$key_arrs[0]]['date_histogram'])){
                         $arr[$i][$key_arrs[0]]['terms']['size']=($this->limit['from'] + 1 )*$this->limit['size'];
+                        if($order){
+                            $arr[$i][$key_arrs[0]]['terms']['order']=$order['order'];
+                        }
+                        if($aggs['aggs']){
+                            $arr[$i][$key_arrs[0]]['aggs']=$aggs['aggs'];
+                        }
                     }
                     $arr[$i][$key_arrs[0]]['aggs']['top']['top_hits']['size']=$this->top_hits;
                     $countmp=1;
@@ -964,8 +970,14 @@ class EsParser {
                                 case 'sum':
                                     if(strrpos($v['sub_tree'][0]['base_expr'],".")){
                                         $term_tmp_arrs=explode(".",$v['sub_tree'][0]['base_expr']);
+                                        if (!isset($v['alias']['name'])) {
+                                            $v['alias']['name']='sum'.$term_tmp_arrs[1];
+                                        }
                                         $cardinalitys[$v['alias']['name']]['sum']['field']=$term_tmp_arrs[1];
                                     }else{
+                                        if (!isset($v['alias']['name'])) {
+                                            $v['alias']['name']='sum'.$v['sub_tree'][0]['base_expr'];
+                                        }
                                         $cardinalitys[$v['alias']['name']]['sum']['field']=$v['sub_tree'][0]['base_expr'];
                                     }
                                     $tmmp=1;
