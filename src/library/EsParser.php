@@ -342,7 +342,11 @@ class EsParser {
                     if($page_tmp>=$page){
                     }else{
                         $page=$page_tmp;
-                        $this->Builderarr['from']=($page_tmp-1) * $this->limit['size'];
+                        if($page_tmp!=0){
+                            $this->Builderarr['from']=($page_tmp-1) * $this->limit['size'];
+                        }else{
+                            $this->Builderarr['from']=0;
+                        }
                         $this->Builderarr['size']=$this->limit['size'];
                     }
                     $outputs['page']=$page==0?1:$page;
@@ -462,6 +466,9 @@ class EsParser {
                     $this->tmp_str=$lowerstr;
                     break;
                 case 'in':
+                    if($arr[$i-1]['base_expr']=='not'){
+                        break;
+                    }
                     if(strrpos($arr[$i-1]['base_expr'],".")){
                         $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
                         $termk=$term_tmp_arr[1];
@@ -483,6 +490,34 @@ class EsParser {
                                 $termk .='.keyword';
                             }
                             $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['terms'][$termk][]=$vv['base_expr'];
+                        }
+                    }
+                    $this->tmp_lock=$lowerstr;
+                    $this->tmp_str=$termk;
+                    unset($termk);
+                    break;
+                case 'not':
+                    if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        $termk=$term_tmp_arr[1];
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                    if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock==$lowerstr){
+                        if($this->tmp_str_filter==''){
+                            $this->count_tmp_filter++;
+                        }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
+                            $this->count_tmp_filter++;
+                        }
+                    }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                            $this->count_tmp_filter++;
+                    }
+                    if(isset($arr[$i+2]['sub_tree']) && !empty($arr[$i+2]['sub_tree'])){
+                        foreach ($arr[$i+2]['sub_tree'] as &$vv) {
+                            if(!is_numeric($vv['base_expr']) && $this->version_es=='5.x'){
+                                $termk .='.keyword';
+                            }
+                            $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not']['terms'][$termk][]=$vv['base_expr'];
                         }
                     }
                     $this->tmp_lock=$lowerstr;
