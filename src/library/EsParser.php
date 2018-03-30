@@ -292,11 +292,46 @@ class EsParser {
             $total_str=$output['hits']['total'];
             if(isset($this->parsed['GROUP']) && !empty($this->parsed['GROUP'])){
                 if($output['hits']['hits'] && empty($output['aggregations'][$this->fistgroup]['buckets'])){
-                    $outputs['result']=array_slice($output['hits']['hits'],-$this->limit['size']);
+                    $tmp_counter=count($output['hits']['hits']);
+                    $counter=($this->limit['from'] + 1 )*$this->limit['size'];
+                    if($tmp_counter<$counter){
+                        $page=ceil($tmp_counter/$this->limit['size']);
+                        $outputs['page']=$page;
+                        $outputs['result']=array_slice($output['hits']['hits'],($page-1)*$this->limit['size'],$tmp_counter-(($page-1)*$this->limit['size']));
+                    }else if($tmp_counter==$counter){
+                        $outputs['page']=$this->limit['from']+1;
+                        $outputs['result']=array_slice($output['hits']['hits'],-$this->limit['size']);
+                    }else{
+                        $page=$this->limit['from']+1;
+                        $outputs['page']=$page;
+                        $outputs['result']=array_slice($output['hits']['hits'],($page-1)*$this->limit['size'],$this->limit['size']);
+                    }
                 }else if(isset($output['aggregations'][$this->fistgroup]['buckets']) && !empty($output['aggregations'][$this->fistgroup]['buckets'])){
-                    $outputs['result']=$output['aggregations'];
+                    $tmp_counter=count($output['aggregations'][$this->fistgroup]['buckets']);
+                    $counter=($this->limit['from'] + 1 )*$this->limit['size'];
+                    if($tmp_counter<$counter){
+                        $page=ceil($tmp_counter/$this->limit['size']);
+                        $outputs['page']=$page;
+                        $outputs['result'][$this->fistgroup]['buckets']=array_slice($output['aggregations'][$this->fistgroup]['buckets'],($page-1)*$this->limit['size'],$tmp_counter-(($page-1)*$this->limit['size']));
+                    }else if($tmp_counter==$counter){
+                        $outputs['page']=$this->limit['from']+1;
+                        $outputs['result'][$this->fistgroup]['buckets']=array_slice($output['aggregations'][$this->fistgroup]['buckets'],-$this->limit['size']);
+                    }else{
+                        $page=$this->limit['from']+1;
+                        $outputs['page']=$page;
+                        $outputs['result'][$this->fistgroup]['buckets']=array_slice($output['aggregations'][$this->fistgroup]['buckets'],($page-1)*$this->limit['size'],$this->limit['size']);
+                    }
                 }else{
-                    $outputs['result']=array_slice($output['aggregations'][$this->fistgroup]['buckets'],-$this->limit['size']);
+                    $tmp_counter=count($output['aggregations'][$this->fistgroup]['buckets']);
+                    $counter=($this->limit['from'] + 1 )*$this->limit['size'];
+                    if($tmp_counter<$counter){
+                        $page=ceil($tmp_counter/$this->limit['size']);
+                        $outputs['page']=$page;
+                        $outputs['result']=array_slice($output['aggregations'][$this->fistgroup]['buckets'],($page-1)*$this->limit['size'],$tmp_counter-(($page-1)*$this->limit['size']));
+                    }else if($tmp_counter==$counter){
+                        $outputs['page']=$this->limit['from']+1;
+                        $outputs['result']=array_slice($output['aggregations'][$this->fistgroup]['buckets'],-$this->limit['size']);
+                    }
                 }
             }else{
                 if(isset($output['aggregations']) && !empty($output['aggregations'])){
