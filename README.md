@@ -49,6 +49,7 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     *  SQL Like
     *  SQL COUNT distinct
     *  SQL In
+    *  SQL Not In
     *  SQL avg()
     *  SQL count()
     *  SQL max()
