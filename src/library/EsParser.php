@@ -958,7 +958,11 @@ class EsParser {
                                 case 'count':
                                     if(strrpos($v['sub_tree'][0]['base_expr'],".")){
                                         $term_tmp_arrs=explode(".",$v['sub_tree'][0]['base_expr']);
-                                        $cardinalitys[$v['alias']['name']]['cardinality']['field']=$term_tmp_arrs[1];
+                                         if($term_tmp_arrs[1]!='keyword'){
+                                            $cardinalitys[$v['alias']['name']]['cardinality']['field']=$term_tmp_arrs[1];
+                                         }else{
+                                            $cardinalitys[$v['alias']['name']]['cardinality']['field']=$v['sub_tree'][0]['base_expr'];
+                                        }
                                     }else{
                                         $cardinalitys[$v['alias']['name']]['cardinality']['field']=$v['sub_tree'][0]['base_expr'];
                                     }
@@ -1158,12 +1162,19 @@ class EsParser {
                         if($term_tmp_arrs[1]=='*'){
                             continue;
                         }
-                        if(isset($v['alias']['name'])){
-                            $this->Builderarr['aggs'][$v['alias']['name']]['stats']['field']=$term_tmp_arrs[1];
+                        if($term_tmp_arrs[1]!='keyword'){
+                            if(isset($v['alias']['name'])){
+                                $this->Builderarr['aggs'][$v['alias']['name']]['stats']['field']=$term_tmp_arrs[1];
+                            }else{
+                                $this->Builderarr['aggs'][$v['sub_tree'][0]['base_expr']]['stats']['field']=$term_tmp_arrs[1];
+                            }
                         }else{
-                            $this->Builderarr['aggs'][$v['sub_tree'][0]['base_expr']]['stats']['field']=$term_tmp_arrs[1];
-                        }
-                        
+                            if(isset($v['alias']['name'])){
+                                $this->Builderarr['aggs'][$v['alias']['name']]['cardinality']['field']=$v['sub_tree'][0]['base_expr'];
+                            }else{
+                                $this->Builderarr['aggs'][$v['sub_tree'][0]['base_expr']]['cardinality']['field']=$v['sub_tree'][0]['base_expr'];
+                            }
+                       }                        
                     }else{
                         if($v['sub_tree'][0]['base_expr']=='*'){
                             continue;
