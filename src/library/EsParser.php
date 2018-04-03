@@ -343,7 +343,7 @@ class EsParser {
                     }else{
                         $page=$page_tmp;
                         if($page_tmp!=0){
-                            $this->Builderarr['from']=($page_tmp-1) * $this->limit['size'];
+                            $this->Builderarr['from']=($page_tmp-1) * $this->limit['size']+1;
                         }else{
                             $this->Builderarr['from']=0;
                         }
@@ -888,12 +888,12 @@ class EsParser {
                 if($countmp==0){
                     if(!isset($arr[$i][$key_arr[0]]['date_histogram'])){
                         $arr[$i][$key_arr[0]]['terms']['size']=($this->limit['from'] + 1 )*$this->limit['size'];
+                        if($order){
+                            $arr[$i][$key_arr[0]]['terms']['order']=$order['order'];
+                        }
                     }
                     if(isset($aggs['aggs'])){
                         $arr[$i][$key_arr[0]]['aggs']=$aggs['aggs'];
-                    }
-                    if($order){
-                        $arr[$i][$key_arr[0]]['terms']['order']=$order['order'];
                     }
                     $arr[$i][$key_arr[0]]['aggs']['top']['top_hits']['size']=$this->top_hits;
                     $countmp=1;
@@ -909,9 +909,9 @@ class EsParser {
                         if($order){
                             $arr[$i][$key_arrs[0]]['terms']['order']=$order['order'];
                         }
-                        if(isset($aggs['aggs'])){
-                            $arr[$i][$key_arrs[0]]['aggs']=$aggs['aggs'];
-                        }
+                    }
+                    if(isset($aggs['aggs'])){
+                        $arr[$i][$key_arrs[0]]['aggs']=$aggs['aggs'];
                     }
                     $arr[$i][$key_arrs[0]]['aggs']['top']['top_hits']['size']=$this->top_hits;
                     $countmp=1;
