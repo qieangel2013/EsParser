@@ -889,7 +889,7 @@ class EsParser {
                     if(!isset($arr[$i][$key_arr[0]]['date_histogram'])){
                         $arr[$i][$key_arr[0]]['terms']['size']=($this->limit['from'] + 1 )*$this->limit['size'];
                     }
-                    if($aggs['aggs']){
+                    if(isset($aggs['aggs'])){
                         $arr[$i][$key_arr[0]]['aggs']=$aggs['aggs'];
                     }
                     if($order){
@@ -909,7 +909,7 @@ class EsParser {
                         if($order){
                             $arr[$i][$key_arrs[0]]['terms']['order']=$order['order'];
                         }
-                        if($aggs['aggs']){
+                        if(isset($aggs['aggs'])){
                             $arr[$i][$key_arrs[0]]['aggs']=$aggs['aggs'];
                         }
                     }
@@ -1031,7 +1031,7 @@ class EsParser {
                                     if(isset($v['alias']) && !empty($v['alias'])){
                                         foreach ($agg as $kk => $ve) {
                                             $key_arr=array_keys($ve);
-                                            if($v['alias']['name']==$ve[$key_arr[0]]['terms']['field']){
+                                            if(isset($ve[$key_arr[0]]['terms']['field']) && $v['alias']['name']==$ve[$key_arr[0]]['terms']['field']){
                                                 foreach ($v['sub_tree'] as $ke => $va) {
                                                     if($va['expr_type']=='const'){
                                                         $tmp_ps=str_replace('"','',$va['base_expr']);
@@ -1055,7 +1055,7 @@ class EsParser {
                                     if(isset($v['alias']) && !empty($v['alias'])){
                                         foreach ($agg as $kk => $ve) {
                                             $key_arr=array_keys($ve);
-                                            if($v['alias']['name']==$ve[$key_arr[0]]['terms']['field']){
+                                            if(isset($ve[$key_arr[0]]['terms']['field']) && $v['alias']['name']==$ve[$key_arr[0]]['terms']['field']){
                                                 for ($jj=0;$jj<=count($v['sub_tree'])-1;$jj++) {
                                                     if($v['sub_tree'][$jj]['expr_type']=='const'){
                                                         $tmp_ps=str_replace('"','',$v['sub_tree'][$jj]['base_expr']);
@@ -1155,6 +1155,7 @@ class EsParser {
     private function select($arr){
         if(isset($this->parsed['GROUP']) && !empty($this->parsed['GROUP'])){
         }else{
+            $tmp_source=array();
             foreach ($arr as $k => $v) {
                 if($v['expr_type']=='aggregate_function'){
                      if(strrpos($v['sub_tree'][0]['base_expr'],".")){
@@ -1163,12 +1164,14 @@ class EsParser {
                             continue;
                         }
                         if($term_tmp_arrs[1]!='keyword'){
+                            array_push($tmp_source,$term_tmp_arrs[1]);
                             if(isset($v['alias']['name'])){
                                 $this->Builderarr['aggs'][$v['alias']['name']]['stats']['field']=$term_tmp_arrs[1];
                             }else{
                                 $this->Builderarr['aggs'][$v['sub_tree'][0]['base_expr']]['stats']['field']=$term_tmp_arrs[1];
                             }
                         }else{
+                            array_push($tmp_source,$v['sub_tree'][0]['base_expr']);
                             if(isset($v['alias']['name'])){
                                 $this->Builderarr['aggs'][$v['alias']['name']]['cardinality']['field']=$v['sub_tree'][0]['base_expr'];
                             }else{
@@ -1179,13 +1182,19 @@ class EsParser {
                         if($v['sub_tree'][0]['base_expr']=='*'){
                             continue;
                         }
+                        array_push($tmp_source,$v['sub_tree'][0]['base_expr']);
                         if(isset($v['alias']['name'])){
                             $this->Builderarr['aggs'][$v['alias']['name']]['stats']['field']=$v['sub_tree'][0]['base_expr'];
                         }else{
                             $this->Builderarr['aggs'][$v['sub_tree'][0]['base_expr']]['stats']['field']=$v['sub_tree'][0]['base_expr'];
                         }  
                     }
+                }else{
+                    array_push($tmp_source,$v['base_expr']);
                 }
+            }
+            if(!empty($tmp_source)){
+                $this->Builderarr['_source']['include']=$tmp_source;
             }
         }        
     }
