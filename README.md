@@ -59,6 +59,7 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     *  SQL Aliases
     *  SQL concat_ws
     *  SQL DATE_FORMATE
+    *  SQL Having
 ### 使用注意事项
     请在配置项填写es的版本,这样系统不会请求获取版本，这样不会多一次请求,建议配置一下
 ### 交流使用
