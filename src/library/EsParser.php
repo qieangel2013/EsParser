@@ -18,6 +18,7 @@ class EsParser {
     private $top_hits=0;
     private $top_hits_size=1;
     private $agg;
+    private $havingagg=array();
     private $sort;
     private $index_es='';
     private $type_es='';
@@ -26,6 +27,10 @@ class EsParser {
     private $count_tmp_filter=0;
     private $count_tmp_range=0;
     private $count_fi=0;
+    private $count_tmp_have=0;
+    private $count_tmp_filter_have=0;
+    private $count_tmp_range_have=0;
+    private $count_fi_have=0;
     private $tmp_str='';
     private $tmp_str_filter='';
     private $tmp_fi='';
@@ -34,6 +39,14 @@ class EsParser {
     private $tmp_lock_str='';
     private $tmp_lock_fi='';
     private $tmp_lock_range='';
+    private $tmp_str_have='';
+    private $tmp_str_filter_have='';
+    private $tmp_fi_have='';
+    private $tmp_str_range_have='';
+    private $tmp_lock_have='';
+    private $tmp_lock_str_have='';
+    private $tmp_lock_fi_have='';
+    private $tmp_lock_range_have='';
     private $fistgroup='';
     private $limit;
     public $result;
@@ -144,6 +157,10 @@ class EsParser {
             }
         }else{
             $this->limit(array());
+        }
+        //having
+        if(isset($this->parsed['HAVING']) && !empty($this->parsed['HAVING'])){
+            $this->having($this->parsed['HAVING']);
         }
         //where
         if(isset($this->parsed['WHERE']) && !empty($this->parsed['WHERE'])){
@@ -487,6 +504,25 @@ class EsParser {
                     }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
                             $this->count_tmp_filter++;
                     }
+                    if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='or' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='or'){
+                        if(isset($this->Builderarr['query']['bool']['filter']['bool']['should'][$this->count_tmp]) && $this->tmp_lock_str!='' && $this->tmp_lock_str==$lowerstr){
+                            if($this->tmp_str==''){
+                                $this->count_tmp++;
+                            }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp++;
+                            }
+                        }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                            $this->count_tmp++;
+                        }
+                        if(isset($arr[$i+1]['sub_tree']) && !empty($arr[$i+1]['sub_tree'])){
+                            foreach ($arr[$i+1]['sub_tree'] as &$vv) {
+                                if(!is_numeric($vv['base_expr']) && $this->version_es=='5.x'){
+                                    $termk .='.keyword';
+                                }
+                             $this->Builderarr['query']['bool']['filter']['bool']['should'][$this->count_tmp]['terms'][$termk][]=$vv['base_expr'];
+                        }
+                    }
+                }else{
                     if(isset($arr[$i+1]['sub_tree']) && !empty($arr[$i+1]['sub_tree'])){
                         foreach ($arr[$i+1]['sub_tree'] as &$vv) {
                             if(!is_numeric($vv['base_expr']) && $this->version_es=='5.x'){
@@ -495,6 +531,7 @@ class EsParser {
                             $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['terms'][$termk][]=$vv['base_expr'];
                         }
                     }
+                }
                     $this->tmp_lock=$lowerstr;
                     $this->tmp_str=$termk;
                     unset($termk);
@@ -893,6 +930,9 @@ class EsParser {
                         }
                     }
                     if(isset($aggs['aggs'])){
+                        if(isset($this->havingagg['having']) && !empty($this->havingagg['having'])){
+                            $aggs['aggs']['having']=$this->havingagg['having'];
+                        }
                         $arr[$i][$key_arr[0]]['aggs']=$aggs['aggs'];
                     }
                     $arr[$i][$key_arr[0]]['aggs']['top']['top_hits']['size']=$this->top_hits;
@@ -911,6 +951,9 @@ class EsParser {
                         }
                     }
                     if(isset($aggs['aggs'])){
+                        if(isset($this->havingagg['having']) && !empty($this->havingagg['having'])){
+                            $aggs['aggs']['having']=$this->havingagg['having'];
+                        }
                         $arr[$i][$key_arrs[0]]['aggs']=$aggs['aggs'];
                     }
                     $arr[$i][$key_arrs[0]]['aggs']['top']['top_hits']['size']=$this->top_hits;
@@ -945,6 +988,7 @@ class EsParser {
                 $this->fistgroup=$termk_tmp;
             }
             $agg[$i][$termk_tmp]['terms']['field']=$termk;
+            $agg[$i][$termk_tmp]['terms']['size']=($this->limit['from'] + 1 )*$this->limit['size'];
         }
             if(isset($this->parsed['SELECT']) && !empty($this->parsed['SELECT'])){
                 foreach ($this->parsed['SELECT'] as $v) {
@@ -1069,9 +1113,11 @@ class EsParser {
                                                                 break;
                                                             case 'Ym':
                                                                 $agg[$kk][$key_arr[0]]['date_histogram']['interval']="month";
+                                                                $agg[$kk][$key_arr[0]]['date_histogram']['format']="yyyy-MM";
                                                                 break;
                                                             case 'Y':
                                                                 $agg[$kk][$key_arr[0]]['date_histogram']['interval']="year";
+                                                                $agg[$kk][$key_arr[0]]['date_histogram']['format']="yyyy";
                                                                 break;
                                                             case 'Yu':
                                                                 $agg[$kk][$key_arr[0]]['date_histogram']['interval']="week";
@@ -1149,6 +1195,526 @@ class EsParser {
             $this->limit['size']=10;
         }else{
             $this->limit['size']=$arr['rowcount'];
+        }
+    }
+
+    private function haveext($arr,$i){
+          if(!is_numeric($arr[$i]['base_expr'])){
+                $lowerstr = strtolower($arr[$i]['base_expr']);
+            }else{
+                $lowerstr = $arr[$i]['base_expr'];
+            }
+            switch ($lowerstr) {
+                case '=':
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
+                    if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='or' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='or'){
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                            $termk=$term_tmp_arr[1];
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+
+                        if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_have!='' && $this->tmp_lock_have!=$lowerstr){
+                            if($this->tmp_str_filter_have==''){
+                                $this->count_tmp_filter_have++;
+                            }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        if(isset($this->havingagg['having']['filter']['bool']['must'][0]) && $this->tmp_lock_str_have!='' && $this->tmp_lock_str_have!=$lowerstr){
+                            if($this->tmp_str_have==''){
+                                $this->count_tmp_have++;
+                            }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                                $this->count_tmp_have++;
+                            }
+                        }
+                        if(isset($this->parsed['UPDATE']) && !empty($this->parsed['UPDATE'])){
+                            $this->url .=$tmp_da_str ."/_update?pretty";
+                        }else{
+                            if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $this->havingagg['having']['filter']['bool']['must'][$this->count_tmp_have]['bool']['should'][]=$term;
+                            }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $this->havingagg['having']['filter']['bool']['must'][$this->count_tmp_have]['bool']['should'][]=$term;
+                            }
+                                unset($term['match_phrase']);
+                        }
+                        $this->tmp_lock=$lowerstr;
+                        $this->tmp_lock_str=$lowerstr;
+                    }else if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='and' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='and'){
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                            $termk=$term_tmp_arr[1];
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+                        if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_str_have!='' && $this->tmp_lock_str_have!=$lowerstr){
+                            if($this->tmp_str_have==''){
+                                $this->count_tmp_have++;
+                            }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                                $this->count_tmp_have++;
+                            }
+                        }
+                        if(isset($this->parsed['UPDATE']) && !empty($this->parsed['UPDATE'])){
+                            $this->url .=$tmp_da_str ."/_update?pretty";
+                        }else{
+                            if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_have!='' && $this->tmp_lock_have!=$lowerstr){
+                                if($this->tmp_str_filter_have==''){
+                                    $this->count_tmp_filter_have++;
+                                }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                                    $this->count_tmp_filter_have++;
+                                }
+                            }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                            if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $this->havingagg['having']['filter']['bool']['must'][]=$term;
+                            }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $this->havingagg['having']['filter']['bool']['must'][]=$term;
+                            }
+                                unset($term['match_phrase']);
+                        }
+                        $this->tmp_lock_str_have=$lowerstr;
+                    }
+                    $this->tmp_lock_have=$lowerstr;
+                    $this->tmp_str_have=$lowerstr;
+                    break;
+                case 'in':
+                    if($arr[$i-1]['base_expr']=='not'){
+                        break;
+                    }
+                    if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        $termk=$term_tmp_arr[1];
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                    if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_have!='' && $this->tmp_lock_have==$lowerstr){
+                        if($this->tmp_str_filter_have==''){
+                            $this->count_tmp_filter_have++;
+                        }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                            $this->count_tmp_filter_have++;
+                        }
+                    }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                            $this->count_tmp_filter_have++;
+                    }
+                    if(isset($arr[$i+1]['sub_tree']) && !empty($arr[$i+1]['sub_tree'])){
+                        foreach ($arr[$i+1]['sub_tree'] as &$vv) {
+                            if(!is_numeric($vv['base_expr']) && $this->version_es=='5.x'){
+                                $termk .='.keyword';
+                            }
+                            $this->havingagg['having']['filter']['terms'][$termk][]=$vv['base_expr'];
+                        }
+                    }
+                    $this->tmp_lock_have=$lowerstr;
+                    $this->tmp_str_have=$termk;
+                    unset($termk);
+                    break;
+                case 'not':
+                    if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        $termk=$term_tmp_arr[1];
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                    if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_have!='' && $this->tmp_lock_have==$lowerstr){
+                        if($this->tmp_str_filter_have==''){
+                            $this->count_tmp_filter_have++;
+                        }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                            $this->count_tmp_filter_have++;
+                        }
+                    }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                            $this->count_tmp_filter_have++;
+                    }
+                    if(isset($arr[$i+2]['sub_tree']) && !empty($arr[$i+2]['sub_tree'])){
+                        foreach ($arr[$i+2]['sub_tree'] as &$vv) {
+                            if(!is_numeric($vv['base_expr']) && $this->version_es=='5.x'){
+                                $termk .='.keyword';
+                            }
+                            $this->havingagg['having']['filter']['bool']['must_not']['terms'][$termk][]=$vv['base_expr'];
+                        }
+                    }
+                    $this->tmp_lock_have=$lowerstr;
+                    $this->tmp_str_have=$termk;
+                    unset($termk);
+                    break;
+                case '>':
+                    if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        $termk=$term_tmp_arr[1];
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                    $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                    $tmp_da_str=str_replace("'","",$tmp_da_str);
+                    $is_date=strtotime($tmp_da_str)?strtotime($tmp_da_str):false;
+                    if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='or' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='or'){
+                        if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_have!='' && $this->tmp_lock_have==$lowerstr){
+                            if($this->tmp_str_filter_have==''){
+                                $this->count_tmp_filter_have++;
+                            }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        }
+                        if(isset($this->havingagg['having']['filter']['bool']['must'][0]) && $this->tmp_lock_fi_have!='' && $this->tmp_lock_fi_have==$lowerstr){
+                            if($this->tmp_fi_have==''){
+                                $this->count_fi_have++;
+                            }else if($this->tmp_fi_have!='' && $this->tmp_fi_have!=$termk){
+                                $this->count_fi_have++;
+                            }
+                        }
+                        if(isset($this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][0]) && $this->tmp_lock_range_have!=''){
+                            if($this->tmp_str_range_have==''){
+                                $this->count_tmp_range_have++;
+                            }else if($this->tmp_str_range_have!='' && $this->tmp_str_range_have!=$termk){
+                                $this->count_tmp_range_have++;
+                            }
+                        }
+                        $this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][$this->count_tmp_range_have]['range'][$termk]['gt']=$tmp_da_str;
+                         if(!isset($this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][$this->count_tmp_range_have]['range'][$termk]['time_zone']) && $is_date){
+                            $this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][$this->count_tmp_range_have]['range'][$termk]['time_zone']="+08:00";
+                        }
+                    }else{
+                        if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_str_have!='' && $this->tmp_lock_str_have!=$lowerstr){
+                            if($this->tmp_str_have==''){
+                                $this->count_tmp_have++;
+                            }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                                $this->count_tmp_have++;
+                            }
+                        }
+                        if(!isset($this->havingagg['having']['filter']['range']) && $this->tmp_lock_have!='' ){
+                            if($this->tmp_str_filter_have==''){
+                                $this->count_tmp_filter_have++;
+                            }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        $this->havingagg['having']['filter']['range'][$termk]['gt']=$tmp_da_str;
+                        if(!isset($this->havingagg['having']['filter']['range'][$termk]['time_zone']) && $is_date){
+                            $this->havingagg['having']['filter']['range'][$termk]['time_zone']="+08:00";
+                        }
+                    }
+                    $this->tmp_str_have=$termk;
+                    $this->tmp_lock_str_have=$lowerstr;
+                    $this->tmp_lock_have=$lowerstr;
+                    $this->tmp_lock_range_have=$lowerstr;
+                    $this->tmp_lock_fi_have=$lowerstr;
+                    break;
+                case '>=':
+                    if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        $termk=$term_tmp_arr[1];
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                    $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                    $tmp_da_str=str_replace("'","",$tmp_da_str);
+                    $is_date=strtotime($tmp_da_str)?strtotime($tmp_da_str):false;
+                    if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='or' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='or'){
+                        if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_have!='' && $this->tmp_lock_have==$lowerstr){
+                            if($this->tmp_str_filter_have==''){
+                                $this->count_tmp_filter_have++;
+                            }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        }
+                        if(isset($this->havingagg['having']['filter']['bool']['must'][0]) && $this->tmp_lock_fi_have!='' && $this->tmp_lock_fi_have==$lowerstr){
+                            if($this->tmp_fi_have==''){
+                                $this->count_fi_have++;
+                            }else if($this->tmp_fi_have!='' && $this->tmp_fi_have!=$termk){
+                                $this->count_fi_have++;
+                            }
+                        }
+                        if(isset($this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][0]) && $this->tmp_lock_range_have!='' ){
+                            if($this->tmp_str_range_have==''){
+                                $this->count_tmp_range_have++;
+                            }else if($this->tmp_str_range_have!='' && $this->tmp_str_range_have!=$termk){
+                                $this->count_tmp_range_have++;
+                            }
+                        }
+                        $this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][$this->count_tmp_range_have]['range'][$termk]['gte']=$tmp_da_str;
+                         if(!isset($this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][$this->count_tmp_range_have]['range'][$termk]['time_zone']) && $is_date){
+                            $this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][$this->count_tmp_range_have]['range'][$termk]['time_zone']="+08:00";
+                        }
+                    }else{
+                        if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_str_have!='' && $this->tmp_lock_str_have!=$lowerstr){
+                            if($this->tmp_str_have==''){
+                                $this->count_tmp_have++;
+                            }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                                $this->count_tmp_have++;
+                            }
+                        }
+                        if(!isset($this->havingagg['having']['filter']['range']) && $this->tmp_lock_have!='' ){
+                            if($this->tmp_str_filter_have==''){
+                                $this->count_tmp_filter_have++;
+                            }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        $this->havingagg['having']['filter']['range'][$termk]['gte']=$tmp_da_str;
+                        if(!isset($this->havingagg['having']['filter']['range'][$termk]['time_zone']) && $is_date){
+                            $this->havingagg['having']['filter']['range'][$termk]['time_zone']="+08:00";
+                        }
+                    }
+                    $this->tmp_str_have=$termk;
+                    $this->tmp_lock_str_have=$lowerstr;
+                    $this->tmp_lock_have=$lowerstr;
+                    $this->tmp_lock_range_have=$lowerstr;
+                    $this->tmp_lock_fi_have=$lowerstr;
+                    break;
+                case '<':
+                    if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        $termk=$term_tmp_arr[1];
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                    $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                    $tmp_da_str=str_replace("'","",$tmp_da_str);
+                    $is_date=strtotime($tmp_da_str)?strtotime($tmp_da_str):false;
+                    if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='or' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='or'){
+                        if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_have!='' && $this->tmp_lock_have==$lowerstr){
+                            if($this->tmp_str_filter_have==''){
+                                $this->count_tmp_filter_have++;
+                            }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        }
+                         if(isset($this->havingagg['having']['filter']['bool']['must'][0]) && $this->tmp_lock_fi_have!='' && $this->tmp_lock_fi_have==$lowerstr){
+                            if($this->tmp_fi_have==''){
+                                $this->count_fi_have++;
+                            }else if($this->tmp_fi_have!='' && $this->tmp_fi_have!=$termk){
+                                $this->count_fi_have++;
+                            }
+                        }
+                        if(isset($this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][0]) && $this->tmp_lock_range_have!=''){
+                            if($this->tmp_str_range_have==''){
+                                $this->count_tmp_range_have++;
+                            }else if($this->tmp_str_range_have!='' && $this->tmp_str_range_have!=$termk){
+                                $this->count_tmp_range_have++;
+                            }
+                        }
+                        $this->havingagg['having']['filter']['must'][$this->count_fi_have]['bool']['should'][$this->count_tmp_range_have]['range'][$termk]['lt']=$tmp_da_str;
+                         if(!isset($this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][$this->count_tmp_range_have]['range'][$termk]['time_zone']) && $is_date){
+                            $this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][$this->count_tmp_range_have]['range'][$termk]['time_zone']="+08:00";
+                        }
+                    }else{
+                        if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_str_have!='' && $this->tmp_lock_str_have==$lowerstr){
+                            if($this->tmp_str_have==''){
+                                $this->count_tmp_have++;
+                            }
+                        }
+                        if(!isset($this->havingagg['having']['filter']['range']) && $this->tmp_lock_have!='' ){
+                            if($this->tmp_str_filter_have==''){
+                                $this->count_tmp_filter_have++;
+                            }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        $this->havingagg['having']['filter']['range'][$termk]['lt']=$tmp_da_str;
+                        if(!isset($this->havingagg['having']['filter']['range'][$termk]['time_zone']) && $is_date){
+                            $this->havingagg['having']['filter']['range'][$termk]['time_zone']="+08:00";
+                        }
+                    }
+                    
+                    $this->tmp_str_have=$termk;
+                    $this->tmp_lock_str_have=$lowerstr;
+                    $this->tmp_lock_have=$lowerstr;
+                    $this->tmp_lock_range_have=$lowerstr;
+                    $this->tmp_lock_fi_have=$lowerstr;
+                    break;
+                case '<=':
+                    if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        $termk=$term_tmp_arr[1];
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                    $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                    $tmp_da_str=str_replace("'","",$tmp_da_str);
+                    $is_date=strtotime($tmp_da_str)?strtotime($tmp_da_str):false;
+                    if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='or' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='or'){
+                        if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_have!='' && $this->tmp_lock_have==$lowerstr){
+                            if($this->tmp_str_filter_have==''){
+                                $this->count_tmp_filter_have++;
+                            }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        }
+                        if(isset($this->havingagg['having']['filter']['bool']['must'][0]) && $this->tmp_lock_fi_have!='' && $this->tmp_lock_fi_have==$lowerstr){
+                            if($this->tmp_fi_have==''){
+                                $this->count_fi_have++;
+                            }else if($this->tmp_fi_have!='' && $this->tmp_fi_have!=$termk){
+                                $this->count_fi_have++;
+                            }
+                        }
+                        if(isset($this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][0]) && $this->tmp_lock_range_have!='' ){
+                            if($this->tmp_str_range_have==''){
+                                $this->count_tmp_range_have++;
+                            }else if($this->tmp_str_range_have!='' && $this->tmp_str_range_have!=$termk){
+                                $this->count_tmp_range_have++;
+                            }
+                        }
+                        $this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][$this->count_tmp_range_have]['range'][$termk]['lte']=$tmp_da_str;
+                         if(!isset($this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][$this->count_tmp_range_have]['range'][$termk]['time_zone']) && $is_date){
+                            $this->havingagg['having']['bool']['must'][$this->count_fi_have]['bool']['should'][$this->count_tmp_range_have]['range'][$termk]['time_zone']="+08:00";
+                        }
+                    }else{
+                        if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_str_have!='' && $this->tmp_lock_str_have==$lowerstr){
+                            if($this->tmp_str_have==''){
+                                $this->count_tmp_have++;
+                            }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                                $this->count_tmp_have++;
+                            }
+                        }
+                        if(!isset($this->havingagg['having']['filter']['range']) && $this->tmp_lock_have!=''){
+                            if($this->tmp_str_filter_have==''){
+                                $this->count_tmp_filter_have++;
+                            }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        $this->havingagg['having']['filter']['range'][$termk]['lte']=$tmp_da_str;
+                        if(!isset($this->havingagg['having']['filter']['range'][$termk]['time_zone']) && $is_date){
+                            $this->havingagg['having']['filter']['range'][$termk]['time_zone']="+08:00";
+                        }
+                    }
+                    $this->tmp_str_have=$termk;
+                    $this->tmp_lock_str_have=$lowerstr;
+                    $this->tmp_lock_have=$lowerstr;
+                    $this->tmp_lock_range_have=$lowerstr;
+                    $this->tmp_lock_fi_have=$lowerstr;
+                    break;
+                case 'like':
+                    if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        $termk=$term_tmp_arr[1];
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                    $tmp_la_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                    $tmp_la_str=str_replace("'","",$tmp_la_str);
+                    if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='or' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='or'){
+                        if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_have!='' && $this->tmp_lock_have!=$lowerstr){
+                            if($this->tmp_str_filter_have==''){
+                                $this->count_tmp_filter_have++;
+                            }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                                $this->count_tmp_filter_have++;
+                            }
+                        }
+                        if(isset($this->havingagg['having']['filter']['bool']['must'][0]) && $this->tmp_lock_fi_have!='' && $this->tmp_lock_fi_have!=$lowerstr){
+                            if($this->tmp_fi_have==''){
+                                $this->count_fi_have++;
+                            }else if($this->tmp_fi_have!='' && $this->tmp_fi_have!=$termk){
+                                $this->count_fi_have++;
+                            }
+                        }
+                         if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                            $term['match'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                            $this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][]=$term;
+                        }else{
+                            $term['match'][$termk]=str_replace("%","",$tmp_la_str);
+                            $this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][]=$term;
+                        }
+                    }else{
+                        if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_str_have!='' && $this->tmp_lock_str_have!=$lowerstr){
+                            if($this->tmp_str_have==''){
+                                $this->count_tmp_have++;
+                            }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                                $this->count_tmp_have++;
+                            }
+                        }
+                        if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_have!='' && $this->tmp_lock_have!=$lowerstr){
+                                if($this->tmp_str_filter_have==''){
+                                    $this->count_tmp_filter_have++;
+                                }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                                    $this->count_tmp_filter_have++;
+                                }
+                            }
+                        if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                            $term['match'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                            $this->havingagg['having']['filter']['must'][$this->count_tmp_have]['bool']['must'][]=$term;
+                        }else{
+                            $term['match'][$termk]=str_replace("%","",$tmp_la_str);
+                            $this->havingagg['having']['filter']['bool']['must'][]=$term;
+                        }
+                    }
+                    unset($term['match']);
+                    $this->tmp_lock_str_have=$lowerstr;
+                    $this->tmp_lock_have=$lowerstr;
+                    $this->tmp_lock_fi_have=$lowerstr;
+                    break;
+                case 'between':
+                     if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        $termk=$term_tmp_arr[1];
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                    if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_str_have!='' && $this->tmp_lock_str_have!=$lowerstr){
+                        if($this->tmp_str_have==''){
+                            $this->count_tmp_have++;
+                        }else if($this->tmp_str_have!='' && $this->tmp_str_have!=$termk){
+                            $this->count_tmp_have++;
+                        }
+                    }
+                    if(isset($this->havingagg['having']['filter']) && $this->tmp_lock_have!='' && $this->tmp_lock_have!=$lowerstr){
+                        if($this->tmp_str_filter_have==''){
+                            $this->count_tmp_filter_have++;
+                        }else if($this->tmp_str_filter_have!='' && $this->tmp_str_filter_have!=$termk){
+                            $this->count_tmp_filter_have++;
+                        }
+                    }
+                    $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                    $tmp_da_str=str_replace("'","",$tmp_da_str);
+                    $is_date=strtotime($tmp_da_str)?strtotime($tmp_da_str):false;
+                    $this->havingagg['having']['filter']['range'][$termk]['gte']=$tmp_da_str;
+                    if(!isset($this->havingagg['having']['filter']['range'][$termk]['time_zone']) && $is_date){
+                        $this->havingagg['having']['filter']['range'][$termk]['time_zone']="+08:00";
+                    }
+                    $tmp_da_str=str_replace('"','',$arr[$i+3]['base_expr']);
+                    $tmp_da_str=str_replace("'","",$tmp_da_str);
+                    $this->havingagg['having']['filter']['range'][$termk]['lte']=$tmp_da_str;
+                    $this->tmp_str_have=$termk;
+                    $this->tmp_lock_str_have=$lowerstr;
+                    $this->tmp_lock_have=$lowerstr;
+                    break;
+            }
+    }
+
+
+
+
+
+    private function having($arr){
+        if(isset($this->parsed['HAVING']) && !empty($this->parsed['HAVING'])){
+            for ($i=0; $i <count($arr);$i++) { 
+                $this->haveext($arr,$i);
+            }
+            if(isset($this->parsed['GROUP']) && !empty($this->parsed['GROUP'])){
+            }else{
+                $this->Builderarr['aggs']['having']=$this->havingagg['having'];
+            }
         }
     }
 
