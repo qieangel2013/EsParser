@@ -381,8 +381,19 @@ class EsParser {
         for($i=0;$i<count($arr);$i++){
             if($arr[$i]['expr_type']=='bracket_expression'){
                 if($arr[$i]['sub_tree']){
-                    for($j=0;$j<count($arr[$i]['sub_tree']);$j++){
-                        $this->whereext($arr[$i]['sub_tree'],$j);
+                    if(count($arr[$i]['sub_tree'])>1){
+                        for($jj=0;$jj<count($arr[$i]['sub_tree']);$jj++){
+                            $this->whereor($arr[$i]['sub_tree'],$jj);
+                        }
+                    }else{
+                        if(isset($arr[$i]['sub_tree'][0]['expr_type']) && $arr[$i]['sub_tree'][0]['expr_type']=='bracket_expression'){
+                            $tmp_arr=$arr[$i]['sub_tree'][0]['sub_tree'];
+                        }else{
+                            $tmp_arr=$arr[$i]['sub_tree'];
+                        }
+                        for($j=0;$j<count($tmp_arr);$j++){
+                            $this->whereext($tmp_arr,$j);
+                        }
                     }
                 }
             }else{
@@ -391,6 +402,350 @@ class EsParser {
             
         }
     }
+
+    private function whereorext($arr){
+        $tmp_or=array();
+        for($i=0;$i<count($arr);$i++){
+            if(!is_numeric($arr[$i]['base_expr'])){
+                $lowerstr = strtolower($arr[$i]['base_expr']);
+            }else{
+                $lowerstr = $arr[$i]['base_expr'];
+            }
+            switch ($lowerstr) {
+                case '=':
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
+                    if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='and' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='and'){
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                            if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+                        if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $tmp_or['bool']['must'][]=$term;
+                        }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $tmp_or['bool']['must'][]=$term;
+                        }
+                    }else{
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                           if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+                        if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $tmp_or['bool']['must'][]=$term;
+                        }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $tmp_or['bool']['must'][]=$term;
+                        }
+                    }
+                break;
+            case '!=':
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
+                    if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='and' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='and'){
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                            if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+                        if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $tmp_or['bool']['must_not'][]=$term;
+                        }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $tmp_or['bool']['must_not'][]=$term;
+                        }
+                    }else{
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                           if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+                        if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $tmp_or['bool']['must_not'][]=$term;
+                        }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $tmp_or['bool']['must_not'][]=$term;
+                        }
+                    }
+                break;
+            case 'in':
+                if(strtolower($arr[$i-1]['base_expr'])=='not'){
+                        break;
+                }
+                if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                if(isset($arr[$i+1]['sub_tree']) && !empty($arr[$i+1]['sub_tree'])){
+                        foreach ($arr[$i+1]['sub_tree'] as &$vv) {
+                            if(!is_numeric($vv['base_expr']) && $this->version_es=='8.x'){
+                                $termk .='.keyword';
+                            }
+                            $tmp_or['terms'][$termk][]=$vv['base_expr'];
+                        }
+                    }
+                break;
+            case 'not':
+                if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        if($term_tmp_arr[1]!='keyword'){
+                            if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        } 
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                switch (strtolower($arr[$i+1]['base_expr'])) {
+                        case 'in':
+                            if(isset($arr[$i+2]['sub_tree']) && !empty($arr[$i+2]['sub_tree'])){
+                                foreach ($arr[$i+2]['sub_tree'] as &$vv) {
+                                    if(!is_numeric($vv['base_expr']) && $this->version_es=='8.x'){
+                                        $termk .='.keyword';
+                                    }
+                                    $tmp_or['bool']['must_not']['terms'][$termk][]=$vv['base_expr'];
+                                }
+                            }
+                            break;
+                        
+                        case 'like':
+                            $tmp_la_str=str_replace('"','',$arr[$i+2]['base_expr']);
+                            $tmp_la_str=str_replace("'","",$tmp_la_str);
+                            if(!is_numeric($arr[$i+2]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                                $tmp_or['bool']['must_not'][]=$term;
+                            }else{
+                                $term['match'][$termk]=str_replace("%","",$tmp_la_str);
+                                $tmp_or['bool']['must_not'][]=$term;
+                            }
+                            break;
+                    }
+                break;
+            case '>':
+                if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                $tmp_da_str=str_replace("'","",$tmp_da_str);
+                $is_date=strtotime($tmp_da_str)?strtotime($tmp_da_str):false;
+                $tmp_or['range'][$termk]['gt']=$tmp_da_str;
+                if(!isset($tmp_or['range'][$termk]['time_zone']) && $is_date){
+                    $tmp_or['range'][$termk]['time_zone']="+08:00";
+                }
+                break;
+            case '>=':
+                if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                $tmp_da_str=str_replace("'","",$tmp_da_str);
+                $is_date=strtotime($tmp_da_str)?strtotime($tmp_da_str):false;
+                $tmp_or['range'][$termk]['gte']=$tmp_da_str;
+                if(!isset($tmp_or['range'][$termk]['time_zone']) && $is_date){
+                    $tmp_or['range'][$termk]['time_zone']="+08:00";
+                }
+                break;
+            case '<':
+                if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                $tmp_da_str=str_replace("'","",$tmp_da_str);
+                $is_date=strtotime($tmp_da_str)?strtotime($tmp_da_str):false;
+                $tmp_or['range'][$termk]['lt']=$tmp_da_str;
+                if(!isset($tmp_or['range'][$termk]['time_zone']) && $is_date){
+                    $tmp_or['range'][$termk]['time_zone']="+08:00";
+                }
+                break;
+            case '<=':
+                if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                $tmp_da_str=str_replace("'","",$tmp_da_str);
+                $is_date=strtotime($tmp_da_str)?strtotime($tmp_da_str):false;
+                $tmp_or['range'][$termk]['lte']=$tmp_da_str;
+                if(!isset($tmp_or['range'][$termk]['time_zone']) && $is_date){
+                    $tmp_or['range'][$termk]['time_zone']="+08:00";
+                }
+                break;
+            case 'like':
+                if(strtolower($arr[$i-1]['base_expr'])=='not'){
+                        break;
+                }
+                if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                $tmp_la_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                $tmp_la_str=str_replace("'","",$tmp_la_str);
+                if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                    $term['match'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                    $tmp_or['bool']['must'][]=$term;
+                }else{
+                    $term['match'][$termk]=str_replace("%","",$tmp_la_str);
+                    $tmp_or['bool']['must'][]=$term;
+                }
+                break;
+            case 'between':
+                if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                 $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                 $tmp_da_str=str_replace("'","",$tmp_da_str);
+                 $is_date=strtotime($tmp_da_str)?strtotime($tmp_da_str):false;
+                 $tmp_or['range'][$termk]['gte']=$tmp_da_str;
+                 if(!isset($tmp_or['range'][$termk]['time_zone']) && $is_date){
+                    $tmp_or['range'][$termk]['time_zone']="+08:00";
+                 }
+                 $tmp_da_str=str_replace('"','',$arr[$i+3]['base_expr']);
+                 $tmp_da_str=str_replace("'","",$tmp_da_str);
+                 $tmp_or['range'][$termk]['lte']=$tmp_da_str;
+                break;
+            
+            }     
+        }
+        return $tmp_or;
+    }
+
+
+
+    private function whereor($arr,$i){
+        if(!is_numeric($arr[$i]['base_expr'])){
+                $lowerstr = strtolower($arr[$i]['base_expr']);
+            }else{
+                $lowerstr = $arr[$i]['base_expr'];
+            }
+            switch ($lowerstr) {
+                case 'or':
+                    if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
+                            if($this->tmp_str_filter==''){
+                                $this->count_tmp_filter++;
+                            }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
+                                $this->count_tmp_filter++;
+                            }
+                        }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp_filter++;
+                            }
+                    if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][0]) && $this->tmp_lock_str!='' && $this->tmp_lock_str!=$lowerstr){
+                            if($this->tmp_str==''){
+                                $this->count_tmp++;
+                            }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp++;
+                            }
+                        }
+                    if(!isset($arr[$i-2])){
+                        $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][$this->count_tmp]['bool']['should'][]=$this->whereorext($arr[$i-1]['sub_tree']);
+                    }
+                    $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][$this->count_tmp]['bool']['should'][]=$this->whereorext($arr[$i+1]['sub_tree']);
+                  break;
+                case 'and':
+                    if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
+                            if($this->tmp_str_filter==''){
+                                $this->count_tmp_filter++;
+                            }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
+                                $this->count_tmp_filter++;
+                            }
+                        }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp_filter++;
+                            }
+                    if(!isset($arr[$i-2])){
+                        $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][]=$this->whereorext($arr[$i-1]['sub_tree']);
+                    }
+                    $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][]=$this->whereorext($arr[$i+1]['sub_tree']);
+                    break;
+            }
+
+
+    }
+
 
     private function whereext($arr,$i){
         if(!is_numeric($arr[$i]['base_expr'])){
@@ -406,7 +761,11 @@ class EsParser {
                     if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='or' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='or'){
                         if(strrpos($arr[$i-1]['base_expr'],".")){
                             $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
-                            $termk=$term_tmp_arr[1];
+                            if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
                         }else{
                             $termk=$arr[$i-1]['base_expr'];
                         }
@@ -446,7 +805,11 @@ class EsParser {
                     }else if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='and' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='and'){
                         if(strrpos($arr[$i-1]['base_expr'],".")){
                             $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
-                            $termk=$term_tmp_arr[1];
+                            if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
                         }else{
                             $termk=$arr[$i-1]['base_expr'];
                         }
@@ -481,17 +844,180 @@ class EsParser {
                                 unset($term['match_phrase']);
                         }
                         $this->tmp_lock_str=$lowerstr;
+                    }else{
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                           if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+                        if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
+                                if($this->tmp_str_filter==''){
+                                    $this->count_tmp_filter++;
+                                }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
+                                    $this->count_tmp_filter++;
+                                }
+                            }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp_filter++;
+                            }
+                            if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][]=$term;
+                            }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][]=$term;
+                            }
+                                unset($term['match_phrase']);
+                            $this->tmp_lock_str=$lowerstr;
+                    }
+                    $this->tmp_lock=$lowerstr;
+                    $this->tmp_str=$lowerstr;
+                    break;
+                case '!=':
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
+                    if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='or' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='or'){
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                            if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+
+                        if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
+                            if($this->tmp_str_filter==''){
+                                $this->count_tmp_filter++;
+                            }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
+                                $this->count_tmp_filter++;
+                            }
+                        }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp_filter++;
+                            }
+                        if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][0]) && $this->tmp_lock_str!='' && $this->tmp_lock_str!=$lowerstr){
+                            if($this->tmp_str==''){
+                                $this->count_tmp++;
+                            }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp++;
+                            }
+                        }
+                        if(isset($this->parsed['UPDATE']) && !empty($this->parsed['UPDATE'])){
+                            $this->url .=$tmp_da_str ."/_update?pretty";
+                        }else{
+                            if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][$this->count_tmp]['bool']['should'][]=$term;
+                            }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][$this->count_tmp]['bool']['should'][]=$term;
+                            }
+                                unset($term['match_phrase']);
+                        }
+                        $this->tmp_lock=$lowerstr;
+                        $this->tmp_lock_str=$lowerstr;
+                    }else if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='and' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='and'){
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                            if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+                        if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock_str!='' && $this->tmp_lock_str!=$lowerstr){
+                            if($this->tmp_str==''){
+                                $this->count_tmp++;
+                            }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp++;
+                            }
+                        }
+                        if(isset($this->parsed['UPDATE']) && !empty($this->parsed['UPDATE'])){
+                            $this->url .=$tmp_da_str ."/_update?pretty";
+                        }else{
+                            if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
+                                if($this->tmp_str_filter==''){
+                                    $this->count_tmp_filter++;
+                                }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
+                                    $this->count_tmp_filter++;
+                                }
+                            }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp_filter++;
+                            }
+                            if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][]=$term;
+                            }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][]=$term;
+                            }
+                                unset($term['match_phrase']);
+                        }
+                        $this->tmp_lock_str=$lowerstr;
+                    }else{
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                           if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+                        if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
+                                if($this->tmp_str_filter==''){
+                                    $this->count_tmp_filter++;
+                                }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
+                                    $this->count_tmp_filter++;
+                                }
+                            }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp_filter++;
+                            }
+                            if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][]=$term;
+                            }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][]=$term;
+                            }
+                                unset($term['match_phrase']);
+                            $this->tmp_lock_str=$lowerstr;
                     }
                     $this->tmp_lock=$lowerstr;
                     $this->tmp_str=$lowerstr;
                     break;
                 case 'in':
-                    if($arr[$i-1]['base_expr']=='not'){
+                    if(strtolower($arr[$i-1]['base_expr'])=='not'){
+                        break;
+                    }
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
                         break;
                     }
                     if(strrpos($arr[$i-1]['base_expr'],".")){
                         $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
-                        $termk=$term_tmp_arr[1];
+                        if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
                     }else{
                         $termk=$arr[$i-1]['base_expr'];
                     }
@@ -516,7 +1042,7 @@ class EsParser {
                         }
                         if(isset($arr[$i+1]['sub_tree']) && !empty($arr[$i+1]['sub_tree'])){
                             foreach ($arr[$i+1]['sub_tree'] as &$vv) {
-                                if(!is_numeric($vv['base_expr']) && $this->version_es=='5.x'){
+                                if(!is_numeric($vv['base_expr']) && $this->version_es=='8.x'){
                                     $termk .='.keyword';
                                 }
                              $this->Builderarr['query']['bool']['filter']['bool']['should'][$this->count_tmp]['terms'][$termk][]=$vv['base_expr'];
@@ -525,7 +1051,7 @@ class EsParser {
                 }else{
                     if(isset($arr[$i+1]['sub_tree']) && !empty($arr[$i+1]['sub_tree'])){
                         foreach ($arr[$i+1]['sub_tree'] as &$vv) {
-                            if(!is_numeric($vv['base_expr']) && $this->version_es=='5.x'){
+                            if(!is_numeric($vv['base_expr']) && $this->version_es=='8.x'){
                                 $termk .='.keyword';
                             }
                             $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['terms'][$termk][]=$vv['base_expr'];
@@ -537,9 +1063,20 @@ class EsParser {
                     unset($termk);
                     break;
                 case 'not':
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
                     if(strrpos($arr[$i-1]['base_expr'],".")){
                         $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
-                        $termk=$term_tmp_arr[1];
+                        if($term_tmp_arr[1]!='keyword'){
+                            if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        } 
                     }else{
                         $termk=$arr[$i-1]['base_expr'];
                     }
@@ -552,22 +1089,45 @@ class EsParser {
                     }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
                             $this->count_tmp_filter++;
                     }
-                    if(isset($arr[$i+2]['sub_tree']) && !empty($arr[$i+2]['sub_tree'])){
-                        foreach ($arr[$i+2]['sub_tree'] as &$vv) {
-                            if(!is_numeric($vv['base_expr']) && $this->version_es=='5.x'){
-                                $termk .='.keyword';
+                    switch (strtolower($arr[$i+1]['base_expr'])) {
+                        case 'in':
+                            if(isset($arr[$i+2]['sub_tree']) && !empty($arr[$i+2]['sub_tree'])){
+                                foreach ($arr[$i+2]['sub_tree'] as &$vv) {
+                                    if(!is_numeric($vv['base_expr']) && $this->version_es=='8.x'){
+                                        $termk .='.keyword';
+                                    }
+                                    $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not']['terms'][$termk][]=$vv['base_expr'];
+                                }
                             }
-                            $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not']['terms'][$termk][]=$vv['base_expr'];
-                        }
+                            break;
+                        
+                        case 'like':
+                            $tmp_la_str=str_replace('"','',$arr[$i+2]['base_expr']);
+                            $tmp_la_str=str_replace("'","",$tmp_la_str);
+                            if(!is_numeric($arr[$i+2]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                                $this->Builderarr['query']['filter'][$this->count_tmp_filter]['bool']['must_not'][]=$term;
+                            }else{
+                                $term['match'][$termk]=str_replace("%","",$tmp_la_str);
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][]=$term;
+                            }
+                            break;
                     }
                     $this->tmp_lock=$lowerstr;
                     $this->tmp_str=$termk;
                     unset($termk);
                     break;
                 case '>':
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
                     if(strrpos($arr[$i-1]['base_expr'],".")){
                         $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
-                        $termk=$term_tmp_arr[1];
+                        if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
                     }else{
                         $termk=$arr[$i-1]['base_expr'];
                     }
@@ -629,9 +1189,16 @@ class EsParser {
                     $this->tmp_lock_fi=$lowerstr;
                     break;
                 case '>=':
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
                     if(strrpos($arr[$i-1]['base_expr'],".")){
                         $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
-                        $termk=$term_tmp_arr[1];
+                        if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
                     }else{
                         $termk=$arr[$i-1]['base_expr'];
                     }
@@ -693,9 +1260,16 @@ class EsParser {
                     $this->tmp_lock_fi=$lowerstr;
                     break;
                 case '<':
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
                     if(strrpos($arr[$i-1]['base_expr'],".")){
                         $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
-                        $termk=$term_tmp_arr[1];
+                        if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
                     }else{
                         $termk=$arr[$i-1]['base_expr'];
                     }
@@ -756,9 +1330,16 @@ class EsParser {
                     $this->tmp_lock_fi=$lowerstr;
                     break;
                 case '<=':
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
                     if(strrpos($arr[$i-1]['base_expr'],".")){
                         $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
-                        $termk=$term_tmp_arr[1];
+                        if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
                     }else{
                         $termk=$arr[$i-1]['base_expr'];
                     }
@@ -820,9 +1401,19 @@ class EsParser {
                     $this->tmp_lock_fi=$lowerstr;
                     break;
                 case 'like':
+                    if(strtolower($arr[$i-1]['base_expr'])=='not'){
+                        break;
+                    }
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
                     if(strrpos($arr[$i-1]['base_expr'],".")){
                         $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
-                        $termk=$term_tmp_arr[1];
+                        if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
                     }else{
                         $termk=$arr[$i-1]['base_expr'];
                     }
@@ -879,9 +1470,16 @@ class EsParser {
                     $this->tmp_lock_fi=$lowerstr;
                     break;
                 case 'between':
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
                      if(strrpos($arr[$i-1]['base_expr'],".")){
                         $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
-                        $termk=$term_tmp_arr[1];
+                        if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
                     }else{
                         $termk=$arr[$i-1]['base_expr'];
                     }
@@ -1292,7 +1890,7 @@ class EsParser {
                     $this->tmp_str_have=$lowerstr;
                     break;
                 case 'in':
-                    if($arr[$i-1]['base_expr']=='not'){
+                    if(strtolower($arr[$i-1]['base_expr'])=='not'){
                         break;
                     }
                     if(strrpos($arr[$i-1]['base_expr'],".")){
