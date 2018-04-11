@@ -523,7 +523,9 @@ class EsParser {
                             if(!is_numeric($vv['base_expr']) && $this->version_es=='8.x'){
                                 $termk .='.keyword';
                             }
-                            $tmp_or['terms'][$termk][]=$vv['base_expr'];
+                            $tmp_da_str=str_replace('"','',$vv['base_expr']);
+                            $tmp_da_str=str_replace("'","",$tmp_da_str);
+                            $tmp_or['terms'][$termk][]=$tmp_da_str;
                         }
                     }
                 break;
@@ -549,7 +551,9 @@ class EsParser {
                                     if(!is_numeric($vv['base_expr']) && $this->version_es=='8.x'){
                                         $termk .='.keyword';
                                     }
-                                    $tmp_or['bool']['must_not']['terms'][$termk][]=$vv['base_expr'];
+                                    $tmp_da_str=str_replace('"','',$vv['base_expr']);
+                                    $tmp_da_str=str_replace("'","",$tmp_da_str);
+                                    $tmp_or['bool']['must_not']['terms'][$termk][]=$tmp_da_str;
                                 }
                             }
                             break;
@@ -1045,7 +1049,9 @@ class EsParser {
                                 if(!is_numeric($vv['base_expr']) && $this->version_es=='8.x'){
                                     $termk .='.keyword';
                                 }
-                             $this->Builderarr['query']['bool']['filter']['bool']['should'][$this->count_tmp]['terms'][$termk][]=$vv['base_expr'];
+                                $tmp_da_str=str_replace('"','',$vv['base_expr']);
+                                $tmp_da_str=str_replace("'","",$tmp_da_str);
+                             $this->Builderarr['query']['bool']['filter']['bool']['should'][$this->count_tmp]['terms'][$termk][]=$tmp_da_str;
                         }
                     }
                 }else{
@@ -1054,7 +1060,9 @@ class EsParser {
                             if(!is_numeric($vv['base_expr']) && $this->version_es=='8.x'){
                                 $termk .='.keyword';
                             }
-                            $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['terms'][$termk][]=$vv['base_expr'];
+                            $tmp_da_str=str_replace('"','',$vv['base_expr']);
+                            $tmp_da_str=str_replace("'","",$tmp_da_str);
+                            $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['terms'][$termk][]=$tmp_da_str;
                         }
                     }
                 }
@@ -1096,7 +1104,9 @@ class EsParser {
                                     if(!is_numeric($vv['base_expr']) && $this->version_es=='8.x'){
                                         $termk .='.keyword';
                                     }
-                                    $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not']['terms'][$termk][]=$vv['base_expr'];
+                                    $tmp_da_str=str_replace('"','',$vv['base_expr']);
+                                    $tmp_da_str=str_replace("'","",$tmp_da_str);
+                                    $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not']['terms'][$termk][]=$tmp_da_str;
                                 }
                             }
                             break;
@@ -1913,7 +1923,9 @@ class EsParser {
                             if(!is_numeric($vv['base_expr']) && $this->version_es=='5.x'){
                                 $termk .='.keyword';
                             }
-                            $this->havingagg['having']['filter']['terms'][$termk][]=$vv['base_expr'];
+                            $tmp_da_str=str_replace('"','',$vv['base_expr']);
+                            $tmp_da_str=str_replace("'","",$tmp_da_str);
+                            $this->havingagg['having']['filter']['terms'][$termk][]=$tmp_da_str;
                         }
                     }
                     $this->tmp_lock_have=$lowerstr;
@@ -1941,7 +1953,9 @@ class EsParser {
                             if(!is_numeric($vv['base_expr']) && $this->version_es=='5.x'){
                                 $termk .='.keyword';
                             }
-                            $this->havingagg['having']['filter']['bool']['must_not']['terms'][$termk][]=$vv['base_expr'];
+                            $tmp_da_str=str_replace('"','',$vv['base_expr']);
+                            $tmp_da_str=str_replace("'","",$tmp_da_str);
+                            $this->havingagg['having']['filter']['bool']['must_not']['terms'][$termk][]=$tmp_da_str;
                         }
                     }
                     $this->tmp_lock_have=$lowerstr;
