@@ -31,6 +31,7 @@ class EsParser {
     private $count_tmp_filter_have=0;
     private $count_tmp_range_have=0;
     private $count_fi_have=0;
+    private $arrtmp=array();
     private $tmp_str='';
     private $tmp_str_filter='';
     private $tmp_fi='';
@@ -768,10 +769,11 @@ class EsParser {
     private function whereorink($arr,$i){
         $tmparrs=$arr;
         if(isset($tmparrs[$i]['base_expr']) && strtolower($tmparrs[$i]['base_expr'])!='or'){
-            $this->whereext($arr,$i);
+            $this->arrtmp[]=$arr[$i];
             $i=$i+1;
             $this->whereorink($tmparrs,$i);
         }
+        return $this->arrtmp;
     }
 
     private function whereor($arr,$i){
@@ -800,7 +802,8 @@ class EsParser {
                     if($arr[$i+1]['expr_type']=='bracket_expression'){
                         $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][0]['bool']['should'][]=$this->whereorext($arr[$i+1]['sub_tree']);
                     }else{
-                        $this->whereorink($arr,$i+1);
+                        $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][0]['bool']['should'][]=$this->whereorext($this->whereorink($arr,$i+1));
+                        $this->arrtmp=array();
                     }
                     
                   break;
@@ -820,7 +823,8 @@ class EsParser {
                     if($arr[$i+1]['expr_type']=='bracket_expression'){
                         $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][]=$this->whereorext($arr[$i+1]['sub_tree']);
                     }else{
-                        $this->whereorink($arr,$i+1);
+                        $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][]=$this->whereorext($this->whereorink($arr,$i+1));
+                        $this->arrtmp=array();
                     }
                     break;
             }
