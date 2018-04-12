@@ -49,11 +49,14 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     *  SQL OR (多重or如:((a=1 and b=2) or (c=3 and d=4)) and e=5)
     *  SQL Like
     *  SQL Not Like
+    *  SQL Is NULL
+    *  SQL Is Not NULL
     *  SQL COUNT distinct
     *  SQL In
     *  SQL Not In
     *  SQL =
     *  SQL !=
+    *  SQL <>
     *  SQL avg()
     *  SQL count()
     *  SQL max()

@@ -382,8 +382,15 @@ class EsParser {
             if($arr[$i]['expr_type']=='bracket_expression'){
                 if($arr[$i]['sub_tree']){
                     if(count($arr[$i]['sub_tree'])>1){
-                        for($jj=0;$jj<count($arr[$i]['sub_tree']);$jj++){
-                            $this->whereor($arr[$i]['sub_tree'],$jj);
+                        if(isset($arr[$i]['sub_tree'][0]['expr_type']) && $arr[$i]['sub_tree'][0]['expr_type']=='bracket_expression'){
+                            for($jj=0;$jj<count($arr[$i]['sub_tree']);$jj++){
+                                $this->whereor($arr[$i]['sub_tree'],$jj);
+                            }
+                        }else{
+                            $tmp_arr=$arr[$i]['sub_tree'];
+                            for($j=0;$j<count($tmp_arr);$j++){
+                                $this->whereext($tmp_arr,$j);
+                            }
                         }
                     }else{
                         if(isset($arr[$i]['sub_tree'][0]['expr_type']) && $arr[$i]['sub_tree'][0]['expr_type']=='bracket_expression'){
@@ -504,6 +511,52 @@ class EsParser {
                         }
                     }
                 break;
+            case '<>':
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
+                    if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='and' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='and'){
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                            if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+                        if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $tmp_or['bool']['must_not'][]=$term;
+                        }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $tmp_or['bool']['must_not'][]=$term;
+                        }
+                    }else{
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                           if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+                        if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $tmp_or['bool']['must_not'][]=$term;
+                        }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $tmp_or['bool']['must_not'][]=$term;
+                        }
+                    }
+                break;
             case 'in':
                 if(strtolower($arr[$i-1]['base_expr'])=='not'){
                         break;
@@ -569,7 +622,20 @@ class EsParser {
                                 $tmp_or['bool']['must_not'][]=$term;
                             }
                             break;
+                            
+                        case 'null':
+                            $tmp_or['exists']['field']=$arr[$i-2]['base_expr'];
+                            break;
                     }
+                break;
+            case 'is':
+                if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
+                    if(strtolower($arr[$i+1]['base_expr'])=='not'){
+                        break;
+                    }
+                    $tmp_or['bool']['must_not'][]['exists']['field']=$arr[$i-1]['base_expr'];
                 break;
             case '>':
                 if(strrpos($arr[$i-1]['base_expr'],".")){
@@ -699,7 +765,14 @@ class EsParser {
         return $tmp_or;
     }
 
-
+    private function whereorink($arr,$i){
+        $tmparrs=$arr;
+        if(isset($tmparrs[$i]['base_expr']) && strtolower($tmparrs[$i]['base_expr'])!='or'){
+            $this->whereext($arr,$i);
+            $i=$i+1;
+            $this->whereorink($tmparrs,$i);
+        }
+    }
 
     private function whereor($arr,$i){
         if(!is_numeric($arr[$i]['base_expr'])){
@@ -712,8 +785,6 @@ class EsParser {
                     if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
                             if($this->tmp_str_filter==''){
                                 $this->count_tmp_filter++;
-                            }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
-                                $this->count_tmp_filter++;
                             }
                         }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
                                 $this->count_tmp_filter++;
@@ -721,14 +792,17 @@ class EsParser {
                     if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][0]) && $this->tmp_lock_str!='' && $this->tmp_lock_str!=$lowerstr){
                             if($this->tmp_str==''){
                                 $this->count_tmp++;
-                            }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
-                                $this->count_tmp++;
                             }
                         }
                     if(!isset($arr[$i-2])){
-                        $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][$this->count_tmp]['bool']['should'][]=$this->whereorext($arr[$i-1]['sub_tree']);
+                        $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][0]['bool']['should'][]=$this->whereorext($arr[$i-1]['sub_tree']);
                     }
-                    $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][$this->count_tmp]['bool']['should'][]=$this->whereorext($arr[$i+1]['sub_tree']);
+                    if($arr[$i+1]['expr_type']=='bracket_expression'){
+                        $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][0]['bool']['should'][]=$this->whereorext($arr[$i+1]['sub_tree']);
+                    }else{
+                        $this->whereorink($arr,$i+1);
+                    }
+                    
                   break;
                 case 'and':
                     if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
@@ -743,7 +817,11 @@ class EsParser {
                     if(!isset($arr[$i-2])){
                         $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][]=$this->whereorext($arr[$i-1]['sub_tree']);
                     }
-                    $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][]=$this->whereorext($arr[$i+1]['sub_tree']);
+                    if($arr[$i+1]['expr_type']=='bracket_expression'){
+                        $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][]=$this->whereorext($arr[$i+1]['sub_tree']);
+                    }else{
+                        $this->whereorink($arr,$i+1);
+                    }
                     break;
             }
 
@@ -1008,6 +1086,131 @@ class EsParser {
                     $this->tmp_lock=$lowerstr;
                     $this->tmp_str=$lowerstr;
                     break;
+                case '<>':
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
+                    if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='or' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='or'){
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                            if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+
+                        if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
+                            if($this->tmp_str_filter==''){
+                                $this->count_tmp_filter++;
+                            }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
+                                $this->count_tmp_filter++;
+                            }
+                        }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp_filter++;
+                            }
+                        if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][0]) && $this->tmp_lock_str!='' && $this->tmp_lock_str!=$lowerstr){
+                            if($this->tmp_str==''){
+                                $this->count_tmp++;
+                            }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp++;
+                            }
+                        }
+                        if(isset($this->parsed['UPDATE']) && !empty($this->parsed['UPDATE'])){
+                            $this->url .=$tmp_da_str ."/_update?pretty";
+                        }else{
+                            if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][$this->count_tmp]['bool']['should'][]=$term;
+                            }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][$this->count_tmp]['bool']['should'][]=$term;
+                            }
+                                unset($term['match_phrase']);
+                        }
+                        $this->tmp_lock=$lowerstr;
+                        $this->tmp_lock_str=$lowerstr;
+                    }else if(isset($arr[$i+2]['base_expr']) && strtolower($arr[$i+2]['base_expr'])=='and' || isset($arr[$i-2]['base_expr']) && strtolower($arr[$i-2]['base_expr'])=='and'){
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                            if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+                        if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock_str!='' && $this->tmp_lock_str!=$lowerstr){
+                            if($this->tmp_str==''){
+                                $this->count_tmp++;
+                            }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp++;
+                            }
+                        }
+                        if(isset($this->parsed['UPDATE']) && !empty($this->parsed['UPDATE'])){
+                            $this->url .=$tmp_da_str ."/_update?pretty";
+                        }else{
+                            if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
+                                if($this->tmp_str_filter==''){
+                                    $this->count_tmp_filter++;
+                                }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
+                                    $this->count_tmp_filter++;
+                                }
+                            }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp_filter++;
+                            }
+                            if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][]=$term;
+                            }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][]=$term;
+                            }
+                                unset($term['match_phrase']);
+                        }
+                        $this->tmp_lock_str=$lowerstr;
+                    }else{
+                        if(strrpos($arr[$i-1]['base_expr'],".")){
+                            $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                           if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        }
+                        $tmp_da_str=str_replace('"','',$arr[$i+1]['base_expr']);
+                        $tmp_da_str=str_replace("'","",$tmp_da_str);
+                        if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
+                                if($this->tmp_str_filter==''){
+                                    $this->count_tmp_filter++;
+                                }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
+                                    $this->count_tmp_filter++;
+                                }
+                            }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                                $this->count_tmp_filter++;
+                            }
+                            if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
+                                $term['match_phrase'][$termk.'.keyword']['query']=$tmp_da_str;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][]=$term;
+                            }else{
+                                $term['match_phrase'][$termk]['query']=$tmp_da_str;
+                                $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][]=$term;
+                            }
+                                unset($term['match_phrase']);
+                            $this->tmp_lock_str=$lowerstr;
+                    }
+                    $this->tmp_lock=$lowerstr;
+                    $this->tmp_str=$lowerstr;
+                    break;
                 case 'in':
                     if(strtolower($arr[$i-1]['base_expr'])=='not'){
                         break;
@@ -1122,7 +1325,45 @@ class EsParser {
                                 $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][]=$term;
                             }
                             break;
+                        case 'null':
+                            $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['exists']['field']=$arr[$i-2]['base_expr'];
+                            break;
                     }
+                    $this->tmp_lock=$lowerstr;
+                    $this->tmp_str=$termk;
+                    unset($termk);
+                    break;
+                case 'is':
+                    if($arr[$i-1]['base_expr']==$arr[$i+1]['base_expr']){
+                        break;
+                    }
+                    if(strtolower($arr[$i+1]['base_expr'])=='not'){
+                        break;
+                    }
+                    if(strrpos($arr[$i-1]['base_expr'],".")){
+                        $term_tmp_arr=explode(".",$arr[$i-1]['base_expr']);
+                        if($term_tmp_arr[1]!='keyword'){
+                            if($term_tmp_arr[1]!='keyword'){
+                                $termk=$term_tmp_arr[1];
+                            }else{
+                                $termk=$arr[$i-1]['base_expr'];
+                            } 
+                        }else{
+                            $termk=$arr[$i-1]['base_expr'];
+                        } 
+                    }else{
+                        $termk=$arr[$i-1]['base_expr'];
+                    }
+                    if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock==$lowerstr){
+                        if($this->tmp_str_filter==''){
+                            $this->count_tmp_filter++;
+                        }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
+                            $this->count_tmp_filter++;
+                        }
+                    }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
+                            $this->count_tmp_filter++;
+                    }
+                    $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][]['exists']['field']=$arr[$i-1]['base_expr'];
                     $this->tmp_lock=$lowerstr;
                     $this->tmp_str=$termk;
                     unset($termk);
