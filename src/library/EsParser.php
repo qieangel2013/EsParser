@@ -647,10 +647,12 @@ class EsParser {
                             $tmp_la_str=str_replace('"','',$arr[$i+2]['base_expr']);
                             $tmp_la_str=str_replace("'","",$tmp_la_str);
                             if(!is_numeric($arr[$i+2]['base_expr']) && $this->version_es=='8.x'){
-                                $term['match'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                                //$term['match_phrase'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                                $term['wildcard'][$termk.'.keyword']=str_replace("%","*",$tmp_la_str);
                                 $tmp_or['bool']['must_not'][]=$term;
                             }else{
-                                $term['match'][$termk]=str_replace("%","",$tmp_la_str);
+                                //$term['match_phrase'][$termk]=str_replace("%","",$tmp_la_str);
+                                $term['wildcard'][$termk]=str_replace("%","*",$tmp_la_str);
                                 $tmp_or['bool']['must_not'][]=$term;
                             }
                             break;
@@ -762,10 +764,12 @@ class EsParser {
                 $tmp_la_str=str_replace('"','',$arr[$i+1]['base_expr']);
                 $tmp_la_str=str_replace("'","",$tmp_la_str);
                 if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
-                    $term['match'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                    //$term['match_phrase'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                    $term['wildcard'][$termk.'.keyword']=str_replace("%","*",$tmp_la_str);
                     $tmp_or['bool']['must'][]=$term;
                 }else{
-                    $term['match'][$termk]=str_replace("%","",$tmp_la_str);
+                    //$term['match_phrase'][$termk]=str_replace("%","",$tmp_la_str);
+                    $term['wildcard'][$termk]=str_replace("%","*",$tmp_la_str);
                     $tmp_or['bool']['must'][]=$term;
                 }
                 break;
@@ -1354,10 +1358,12 @@ class EsParser {
                             $tmp_la_str=str_replace('"','',$arr[$i+2]['base_expr']);
                             $tmp_la_str=str_replace("'","",$tmp_la_str);
                             if(!is_numeric($arr[$i+2]['base_expr']) && $this->version_es=='8.x'){
-                                $term['match'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                                // $term['match_phrase'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                                $term['wildcard'][$termk.'.keyword']=str_replace("%","*",$tmp_la_str);
                                 $this->Builderarr['query']['filter'][$this->count_tmp_filter]['bool']['must_not'][]=$term;
                             }else{
-                                $term['match'][$termk]=str_replace("%","",$tmp_la_str);
+                                //$term['match_phrase'][$termk]=str_replace("%","",$tmp_la_str);
+                                $term['wildcard'][$termk]=str_replace("%","*",$tmp_la_str);
                                 $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must_not'][]=$term;
                             }
                             break;
@@ -1722,10 +1728,12 @@ class EsParser {
                             }
                         }
                          if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
-                            $term['match'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                            //$term['match_phrase'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                            $term['wildcard'][$termk.'.keyword']=str_replace("%","*",$tmp_la_str);
                             $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][$this->count_fi]['bool']['should'][]=$term;
                         }else{
-                            $term['match'][$termk]=str_replace("%","",$tmp_la_str);
+                            //$term['match_phrase'][$termk]=str_replace("%","",$tmp_la_str);
+                            $term['wildcard'][$termk]=str_replace("%","*",$tmp_la_str);
                             $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][$this->count_fi]['bool']['should'][]=$term;
                         }
                     }else{
@@ -1744,14 +1752,16 @@ class EsParser {
                                 }
                             }
                         if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
-                            $term['match'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                            //$term['match_phrase'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                            $term['wildcard'][$termk.'.keyword']=str_replace("%","*",$tmp_la_str);
                             $this->Builderarr['query']['filter'][$this->count_tmp_filter]['must'][$this->count_tmp]['bool']['must'][]=$term;
                         }else{
-                            $term['match'][$termk]=str_replace("%","",$tmp_la_str);
+                            //$term['match_phrase'][$termk]=str_replace("%","",$tmp_la_str);
+                            $term['wildcard'][$termk]=str_replace("%","*",$tmp_la_str);
                             $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][]=$term;
                         }
                     }
-                    unset($term['match']);
+                    unset($term['wildcard']);
                     $this->tmp_lock_str=$lowerstr;
                     $this->tmp_lock=$lowerstr;
                     $this->tmp_lock_fi=$lowerstr;
@@ -2519,10 +2529,12 @@ class EsParser {
                             }
                         }
                          if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
-                            $term['match'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                            //$term['match_phrase'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                            $term['wildcard'][$termk.'.keyword']=str_replace("%","*",$tmp_la_str);
                             $this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][]=$term;
                         }else{
-                            $term['match'][$termk]=str_replace("%","",$tmp_la_str);
+                            //$term['match_phrase'][$termk]=str_replace("%","",$tmp_la_str);\
+                            $term['wildcard'][$termk]=str_replace("%","*",$tmp_la_str);
                             $this->havingagg['having']['filter']['bool']['must'][$this->count_fi_have]['bool']['should'][]=$term;
                         }
                     }else{
@@ -2541,14 +2553,17 @@ class EsParser {
                                 }
                             }
                         if(!is_numeric($arr[$i+1]['base_expr']) && $this->version_es=='8.x'){
-                            $term['match'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                            //$term['match_phrase'][$termk.'.keyword']=str_replace("%","",$tmp_la_str);
+                            //wildcard
+                            $term['wildcard'][$termk.'.keyword']=str_replace("%","*",$tmp_la_str);
                             $this->havingagg['having']['filter']['must'][$this->count_tmp_have]['bool']['must'][]=$term;
                         }else{
-                            $term['match'][$termk]=str_replace("%","",$tmp_la_str);
+                            //$term['match_phrase'][$termk]=str_replace("%","",$tmp_la_str);
+                            $term['wildcard'][$termk]=str_replace("%","*",$tmp_la_str);
                             $this->havingagg['having']['filter']['bool']['must'][]=$term;
                         }
                     }
-                    unset($term['match']);
+                    unset($term['wildcard']);
                     $this->tmp_lock_str_have=$lowerstr;
                     $this->tmp_lock_have=$lowerstr;
                     $this->tmp_lock_fi_have=$lowerstr;
