@@ -13,7 +13,7 @@ $es_config=array(
 	'version' =>"5.x" //1.x 2.x 5.x 6.x,可以不配置，系统会请求获取版本，这样会多一次请求
 );
 $parser = new EsParser($sql, true,$es_config);//第三个参数是es的配置参数，一定要配置
-print_r($parser->result);//打印结果
+print_r($parser->build());//打印结果
 $result=$parser->scroll();//深度分页初始化会返回第一条
 $result=json_decode($result,true);
 print_r($result);//打印深度分页结果
