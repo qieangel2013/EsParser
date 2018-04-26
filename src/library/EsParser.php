@@ -52,6 +52,12 @@ class EsParser {
     private $limit;
     public $result;
     public $explain;
+    public $build;
+    private $scrolltime='3m';
+    private $scrollurl='';
+    private $basescrollurl='';
+    private $isscroll=0;
+    public $scroll;
     /**
      * Constructor. It simply calls the parse() function. 
      * Use the public variable $parsed to get the output.
@@ -71,6 +77,8 @@ class EsParser {
             $this->index_es=$es_config['index'];
             $this->type_es=$es_config['type'];
             $this->url=$es_config['url'];
+            $this->scrollurl=$es_config['url'];
+            $this->basescrollurl=$es_config['url'];
             if(!isset($es_config['version'])){
                 $version=$this->getEsData($es_config['url']);
                 if($version){
@@ -188,13 +196,31 @@ class EsParser {
         if(!isset($this->Builderarr) && empty($this->Builderarr)){
             $this->Builderarr['query']['match_all']=(object)array();
         }
+        return $this;
+    }
+    public function build(){
         //request
         return $this->PostEs($this->Builderarr);
     }
-
     public function explain(){
         $this->explain=json_encode($this->Builderarr,true);
         return $this->explain;
+    }
+
+
+     public function scroll($scrollid=''){
+        $this->isscroll=1;
+        if($scrollid){
+            $this->scrollurl=$this->basescrollurl;
+            $this->scrollurl .="/_search/scroll?pretty";
+            $this->Builderarr=array();
+            $this->Builderarr['scroll']=$this->scrolltime;
+            $this->Builderarr['scroll_id']=$scrollid;
+        }else{
+            $this->scrollurl .="/".$this->index_es."/".$this->type_es."/_search?pretty&scroll=".$this->scrolltime;
+        }
+        $this->url=$this->scrollurl;
+        return $this->PostEs($this->Builderarr);
     }
 
 
@@ -372,6 +398,9 @@ class EsParser {
                 }
             }
             $outputs['total']=$total_str;
+            if($this->isscroll && isset($output['_scroll_id'])){
+                $outputs['scrollid']=$output['_scroll_id'];
+            }
             $this->result=json_encode($outputs,true);
         }
         return $this->result;

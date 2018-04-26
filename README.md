@@ -20,7 +20,16 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
         'version' =>"5.x" //1.x 2.x 5.x 6.x,可以不配置，系统会请求获取版本，这样会多一次请求,建议配置一下
 	 );
     $parser = new EsParser($sql, true,$es_config);//第三个参数是es的配置参数，一定要配置
-    print_r($parser->result);//打印结果
+    print_r($parser->build());//打印结果
+    $result=$parser->scroll();//深度分页初始化会返回第一条
+    $result=json_decode($result,true);
+    print_r($result);//打印深度分页结果
+    $result1=$parser->scroll($result['scrollid']);//深度分页下一页
+    print_r(json_decode($result1,true));//打印深度分页结果
+    $result2=$parser->scroll($result['scrollid']);//深度分页下一页
+    print_r(json_decode($result2,true));//打印深度分页结果
+    $result3=$parser->scroll($result['scrollid']);//深度分页下一页
+    print_r(json_decode($result3,true));//打印深度分页结果
     //print_r($parser->explain());//打印dsl
 ### 普通调用
 	require_once dirname(__FILE__) . '/src/library/EsParser.php';
@@ -36,7 +45,16 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
             'version' =>"5.x" //1.x 2.x 5.x 6.x,可以不配置，系统会请求获取版本，这样会多一次请求,建议配置一下
     	);
 	$parser = new EsParser($sql, true,$es_config);//第三个参数是es的配置参数，一定要配置
-	print_r($parser->result);//打印结果
+	print_r($parser->build());//打印结果
+    $result=$parser->scroll();//深度分页初始化会返回第一条
+    $result=json_decode($result,true);
+    print_r($result);//打印深度分页结果
+    $result1=$parser->scroll($result['scrollid']);//深度分页下一页
+    print_r(json_decode($result1,true));//打印深度分页结果
+    $result2=$parser->scroll($result['scrollid']);//深度分页下一页
+    print_r(json_decode($result2,true));//打印深度分页结果
+    $result3=$parser->scroll($result['scrollid']);//深度分页下一页
+    print_r(json_decode($result3,true));//打印深度分页结果
 	//print_r($parser->explain()); //打印dsl
 ### 目前支持的sql函数
     *  SQL Select

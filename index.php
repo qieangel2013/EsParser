@@ -14,4 +14,13 @@ $es_config=array(
 );
 $parser = new EsParser($sql, true,$es_config);//第三个参数是es的配置参数，一定要配置
 print_r($parser->result);//打印结果
+$result=$parser->scroll();//深度分页初始化会返回第一条
+$result=json_decode($result,true);
+print_r($result);//打印深度分页结果
+$result1=$parser->scroll($result['scrollid']);//深度分页下一页
+print_r(json_decode($result1,true));//打印深度分页结果
+$result2=$parser->scroll($result['scrollid']);//深度分页下一页
+print_r(json_decode($result2,true));//打印深度分页结果
+$result3=$parser->scroll($result['scrollid']);//深度分页下一页
+print_r(json_decode($result3,true));//打印深度分页结果
 //print_r($parser->explain()); //打印dsl
