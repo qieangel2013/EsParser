@@ -38,6 +38,8 @@ class EsParser {
     private $tmp_str_range='';
     private $tmp_lock='';
     private $tmp_lock_str='';
+    private $tmp_or=0;
+    private $tmp_and=0;
     private $tmp_lock_fi='';
     private $tmp_lock_range='';
     private $tmp_str_have='';
@@ -814,7 +816,7 @@ class EsParser {
             switch ($lowerstr) {
                 case 'or':
                     if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
-                            if($this->tmp_str_filter==''){
+                            if($this->tmp_str_filter=='' && !$this->tmp_or){
                                 $this->count_tmp_filter++;
                             }
                         }else if($this->tmp_str!='' && $this->tmp_str!=$termk){
@@ -834,11 +836,11 @@ class EsParser {
                         $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][0]['bool']['should'][]=$this->whereorext($this->whereorink($arr,$i+1));
                         $this->arrtmp=array();
                     }
-                    
+                    $this->tmp_or=1;
                   break;
                 case 'and':
                     if(isset($this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]) && $this->tmp_lock!='' && $this->tmp_lock!=$lowerstr){
-                            if($this->tmp_str_filter==''){
+                            if($this->tmp_str_filter=='' && !$this->tmp_and){
                                 $this->count_tmp_filter++;
                             }else if($this->tmp_str_filter!='' && $this->tmp_str_filter!=$termk){
                                 $this->count_tmp_filter++;
@@ -855,6 +857,7 @@ class EsParser {
                         $this->Builderarr['query']['bool']['filter'][$this->count_tmp_filter]['bool']['must'][]=$this->whereorext($this->whereorink($arr,$i+1));
                         $this->arrtmp=array();
                     }
+                    $this->tmp_and=1;
                     break;
             }
 
