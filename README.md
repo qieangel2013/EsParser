@@ -12,7 +12,8 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     //$sql='update alp_dish_sales_saas set mid=3  where adsid=15125110';
     //$sql='delete from alp_dish_sales_saas where adsid=15546509';
     //$sql="select *,concat_ws('_',category_name.keyword,dish_name.keyword,sku_name.keyword) as dfg from alp_dish_sales_saas where sale_date>'2017-01-01' and sale_date<'2017-09-02' group by dfg order by total_count desc";
-    $sql = 'select *,DATE_FORMAT(sale_date,"%Y-%m-%d") as days from alp_dish_sales_saas group by days ';
+    //$sql = 'select *,DATE_FORMAT(sale_date,"%Y-%m-%d") as days from alp_dish_sales_saas group by days ';
+    $sql="insert into test(`id`,`name`)values(9,'zz')";
     $es_config=array(
 	    'index' =>"alp_dish_sales_saas",
 	    'type'  =>"alp_dish_sales_saas",
@@ -37,7 +38,8 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
 	//$sql='update alp_dish_sales_saas set mid=3  where adsid=15125110';
 	//$sql='delete from alp_dish_sales_saas where adsid=15546509';
     //$sql="select *,concat_ws('_',category_name.keyword,dish_name.keyword,sku_name.keyword) as dfg from alp_dish_sales_saas where sale_date>'2017-01-01' and sale_date<'2017-09-02' group by dfg order by total_count desc";
-    $sql = 'select *,DATE_FORMAT(sale_date,"%Y-%m-%d") as days from alp_dish_sales_saas group by days ';
+    //$sql = 'select *,DATE_FORMAT(sale_date,"%Y-%m-%d") as days from alp_dish_sales_saas group by days ';
+    $sql="insert into test(`id`,`name`)values(9,'zz')";
 	$es_config=array(
         	'index' =>"alp_dish_sales_saas",
         	'type'  =>"alp_dish_sales_saas",
@@ -57,6 +59,7 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     print_r(json_decode($result3,true));//打印深度分页结果
 	//print_r($parser->explain()); //打印dsl
 ### 目前支持的sql函数
+    *  SQL Insert
     *  SQL Select
     *  SQL Delete
     *  SQL Update
