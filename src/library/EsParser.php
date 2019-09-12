@@ -88,8 +88,10 @@ class EsParser {
                         $this->version_es='2.x';
                     }else if( version_compare($version,'5.0.0', '>=') && version_compare($version,'6.0.0', '<')){
                         $this->version_es='5.x';
-                    }else{
+                    }else if( version_compare($version,'6.0.0', '>=') && version_compare($version,'7.0.0', '<')){
                         $this->version_es='6.x';
+                    } else {
+                        $this->version_es='7.x';
                     }
                 }else{
                     $this->version_es='5.x';
@@ -235,13 +237,21 @@ class EsParser {
         if(isset($this->parsed['DELETE']) && !empty($this->parsed['DELETE'])){
             foreach ($arr as $v) {
                 if($v['table']){
-                    $this->url .="/".$this->index_es."/".$this->type_es."/_delete_by_query?pretty";
+                    if ($this->version_es == '7.x'){
+                        $this->url .="/".$this->index_es."/_delete_by_query?pretty";
+                    }else {
+                        $this->url .="/".$this->index_es."/".$this->type_es."/_delete_by_query?pretty";
+                    }  
                 }
             }
         }else{
             foreach ($arr as $v) {
                 if($v['table']){
-                    $this->url .="/".$this->index_es."/".$this->type_es."/_search?pretty";
+                    if ($this->version_es == '7.x'){
+                        $this->url .="/".$this->index_es."/_search?pretty";
+                    } else {
+                        $this->url .="/".$this->index_es."/".$this->type_es."/_search?pretty";
+                    }
                 }
             }
         }
@@ -249,7 +259,11 @@ class EsParser {
     }
 
     private function insert($arr){
-        $this->url .="/".$this->index_es."/".$this->type_es."?pretty";
+        if ($this->version_es == '7.x'){
+            $this->url .="/".$this->index_es."?pretty";
+        }else {
+            $this->url .="/".$this->index_es."/".$this->type_es."?pretty";
+        }
         foreach ($arr as $k=>$v) {
             if(count($v['columns'])>0){
                 $this->Builderarr=$this->resdata($v['columns'],$this->parsed['VALUES'][$k]['data']);
@@ -369,7 +383,11 @@ class EsParser {
         }else if(isset($this->parsed['INSERT']) && !empty($this->parsed['INSERT'])){
             $this->result=json_encode($output,true);
         }else{
-            $total_str=$output['hits']['total'];
+            if ($this->version_es == '7.x'){
+                $total_str=$output['hits']['total']['value'];
+            }else {
+                $total_str=$output['hits']['total'];
+            }
             if(isset($this->parsed['GROUP']) && !empty($this->parsed['GROUP'])){
                 if($output['hits']['hits'] && empty($output['aggregations'][$this->fistgroup]['buckets'])){
                     $tmp_counter=count($output['hits']['hits']);
@@ -1333,6 +1351,9 @@ class EsParser {
                     }
                 }else{
                     if(isset($arr[$i+1]['sub_tree']) && !empty($arr[$i+1]['sub_tree'])){
+                        if ($this->version_es == '7.x'){
+                            $this->count_tmp_filter++;
+                        }
                         foreach ($arr[$i+1]['sub_tree'] as &$vv) {
                             if(!is_numeric($vv['base_expr']) && $this->version_es=='8.x'){
                                 $termk .='.keyword';
