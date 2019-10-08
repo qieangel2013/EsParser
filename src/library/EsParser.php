@@ -280,7 +280,7 @@ class EsParser {
             }
         }
         foreach ($value as $vv) {
-            if($vv['base_expr']){
+            if(strlen($vv['base_expr'])){
                 $fielddata=str_replace("'",'',$vv['base_expr']);
                 $fielddata=str_replace('"','',$fielddata);
                 $valuearr[]=$fielddata;
