@@ -128,6 +128,12 @@ class EsParser {
         $this->parsed = $queries;
         return $this->parsed;
     }
+    
+     public function setSql($sql, $calcPositions = false) {
+        $this->Builderarr = [];
+        $this->url = $this->basescrollurl;
+        return $this->parse($sql, $calcPositions);
+    }
 
     public function parse($sql, $calcPositions = false) {
         $processor = new DefaultProcessor();
