@@ -14,6 +14,7 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     //$sql="select *,concat_ws('_',category_name.keyword,dish_name.keyword,sku_name.keyword) as dfg from alp_dish_sales_saas where sale_date>'2017-01-01' and sale_date<'2017-09-02' group by dfg order by total_count desc";
     //$sql = 'select *,DATE_FORMAT(sale_date,"%Y-%m-%d") as days from alp_dish_sales_saas group by days ';
     $sql="insert into test(`id`,`name`)values(9,'zz')";
+    $sql2="insert into test(`id`,`name`)values(9,'zz')";
     $es_config=array(
 	    'index' =>"alp_dish_sales_saas",
 	    'type'  =>"alp_dish_sales_saas",
@@ -22,6 +23,7 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
 	 );
     $parser = new EsParser($sql, true,$es_config);//第三个参数是es的配置参数，一定要配置
     print_r($parser->build());//打印结果
+    print_r($parser->setSql($sql2)->build());//打印结果
     $result=$parser->scroll();//深度分页初始化会返回第一条
     $result=json_decode($result,true);
     print_r($result);//打印深度分页结果
@@ -40,6 +42,7 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     //$sql="select *,concat_ws('_',category_name.keyword,dish_name.keyword,sku_name.keyword) as dfg from alp_dish_sales_saas where sale_date>'2017-01-01' and sale_date<'2017-09-02' group by dfg order by total_count desc";
     //$sql = 'select *,DATE_FORMAT(sale_date,"%Y-%m-%d") as days from alp_dish_sales_saas group by days ';
     $sql="insert into test(`id`,`name`)values(9,'zz')";
+    $sql2="insert into test(`id`,`name`)values(9,'zz')";
 	$es_config=array(
         	'index' =>"alp_dish_sales_saas",
         	'type'  =>"alp_dish_sales_saas",
@@ -48,6 +51,7 @@ php的操作类库，通过写sql来转化dsl来查询elasticsearch
     	);
 	$parser = new EsParser($sql, true,$es_config);//第三个参数是es的配置参数，一定要配置
 	print_r($parser->build());//打印结果
+	print_r($parser->setSql($sql2)->build());//打印结果
     $result=$parser->scroll();//深度分页初始化会返回第一条
     $result=json_decode($result,true);
     print_r($result);//打印深度分页结果
